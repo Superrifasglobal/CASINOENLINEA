@@ -1,11 +1,14 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { User, Lock, Rocket, X, AlertCircle } from 'lucide-react';
+import { Mail, Lock, Rocket, X, AlertCircle, User } from 'lucide-react';
+import { auth } from '../lib/firebase';
+import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
 
 const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
-    const [username, setUsername] = useState('');
+    const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [displayName, setDisplayName] = useState('');
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
@@ -14,27 +17,49 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
         setLoading(true);
         setError('');
 
-        const endpoint = isLogin ? '/api/auth/login' : '/api/auth/register';
-
         try {
-            const response = await fetch(endpoint, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
-            });
+            if (isLogin) {
+                // Login with Firebase
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
 
-            if (response.ok) {
-                const data = await response.json();
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify(data.user));
-                onAuthSuccess(data.user);
+                // Call success callback
+                onAuthSuccess({
+                    id: user.uid,
+                    email: user.email,
+                    displayName: user.displayName,
+                    balance: 0 // You'd fetch this from your backend
+                });
                 onClose();
             } else {
-                const msg = await response.text();
-                setError(msg || 'Error de autenticación');
+                // Register with Firebase
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Update profile with display name
+                await updateProfile(user, { displayName });
+
+                // Send verification email
+                await sendEmailVerification(user);
+
+                alert(`¡Registro exitoso para ${displayName}! Hemos enviado un correo de verificación a ${email}.`);
+
+                onAuthSuccess({
+                    id: user.uid,
+                    email: user.email,
+                    displayName: displayName,
+                    balance: 0
+                });
+                onClose();
             }
         } catch (err) {
-            setError('Error de conexión con el servidor');
+            console.error(err);
+            let msg = err.message.replace('Firebase: ', '');
+            if (err.code === 'auth/email-already-in-use') msg = 'Este correo ya está registrado.';
+            if (err.code === 'auth/weak-password') msg = 'La contraseña debe tener al menos 6 caracteres.';
+            if (err.code === 'auth/invalid-credential') msg = 'Credenciales inválidas.';
+            if (err.code === 'auth/user-not-found') msg = 'Usuario no encontrado.';
+            setError(msg);
         } finally {
             setLoading(false);
         }
@@ -78,18 +103,35 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
 
                 <form onSubmit={handleSubmit} className="space-y-4 relative">
                     <div className="space-y-4">
+                        {/* Name field (only for registration) */}
+                        {!isLogin && (
+                            <div className="relative group">
+                                <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-neon-green transition-colors" size={18} />
+                                <input
+                                    type="text"
+                                    placeholder="NOMBRE DE USUARIO"
+                                    value={displayName}
+                                    onChange={(e) => setDisplayName(e.target.value)}
+                                    className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold tracking-widest focus:outline-none focus:border-neon-green/50 focus:bg-white/[0.08] transition-all"
+                                    required
+                                />
+                            </div>
+                        )}
+
+                        {/* Email field */}
                         <div className="relative group">
-                            <User className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-neon-blue transition-colors" size={18} />
+                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-neon-blue transition-colors" size={18} />
                             <input
-                                type="text"
-                                placeholder="NOMBRE DE USUARIO"
-                                value={username}
-                                onChange={(e) => setUsername(e.target.value)}
+                                type="email"
+                                placeholder="CORREO ELECTRÓNICO"
+                                value={email}
+                                onChange={(e) => setEmail(e.target.value)}
                                 className="w-full bg-white/5 border border-white/10 rounded-2xl py-4 pl-12 pr-4 text-xs font-bold tracking-widest focus:outline-none focus:border-neon-blue/50 focus:bg-white/[0.08] transition-all"
                                 required
                             />
                         </div>
 
+                        {/* Password field */}
                         <div className="relative group">
                             <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-neon-purple transition-colors" size={18} />
                             <input

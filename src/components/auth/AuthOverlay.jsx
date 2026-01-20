@@ -132,11 +132,11 @@ const AuthOverlay = ({ isOpen, onClose }) => {
 
                         <div className="flex items-center bg-[#1a1d20] border border-[#333] rounded-xl mb-[15px] p-[12px_15px]">
                             <span className="text-[#666] mr-[10px] flex items-center justify-center">
-                                {isLogin ? <User size={16} /> : <Mail size={16} />}
+                                <Mail size={16} />
                             </span>
                             <input
-                                type={isLogin ? "email" : "email"}
-                                placeholder={isLogin ? "CORREO ELECTRÓNICO" : "CORREO ELECTRÓNICO"}
+                                type="email"
+                                placeholder="CORREO ELECTRÓNICO"
                                 required
                                 className="bg-transparent border-none text-white outline-none w-full text-[12px] font-bold placeholder-[#555]"
                                 value={isLogin ? loginData.email : registerData.email}
