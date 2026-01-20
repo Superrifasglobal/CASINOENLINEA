@@ -29,7 +29,8 @@ function App() {
   // Sync user and balance from Supabase
   useEffect(() => {
     const syncUser = async () => {
-      const { data: { session } } = await supabase.auth.getSession();
+      const { data } = await supabase.auth.getSession();
+      const session = data?.session;
       if (session?.user) {
         const { data: profile } = await supabase
           .from('profiles')
