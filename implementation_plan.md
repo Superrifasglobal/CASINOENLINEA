@@ -1,47 +1,31 @@
-# Admin Dashboard Implementation Plan
+# Firebase Auth Migration Plan
 
 ## Goal
-Create a protected Admin Dashboard (`/admin/dashboard`) exclusively for `nexjmr07@gmail.com` that provides real-time casino risk oversight, user management, and maintenance control.
+Replace the custom NextAuth.js/Cloudflare backend with Firebase Authentication to leverage automatic email verification and simpler client-side management.
 
 ## Proposed Changes
 
-### Backend (Cloudflare Workers / D1)
-**File:** `functions/api/[[path]].ts`
+### 1. Configuration (`src/lib/firebase.js`)
+*   Initialize Firebase using environment variables (API Key, Auth Domain, Project ID).
+*   Export `auth` instance.
 
-1.  **Update `handleGetStats`**:
-    *   Add query to sum total `balance` from `users` table (Total Liability).
-    *   Include "Maintenance Mode" status.
-2.  **Add `handleUserSearch`**:
-    *   Endpoint: `GET /api/admin/user-search?email=...`
-    *   Returns user details (id, email, balance, status) for a given email.
-3.  **Add `handleMaintenanceToggle`**:
-    *   Endpoint: `POST /api/admin/maintenance`
-    *   Updates a key `maintenance_mode` in the `settings` table.
-4.  **Middleware/Guard**:
-    *   Ensure these endpoints are strictly protected for the super-admin email/role.
+### 2. Code Refactoring (`src/components/auth/AuthOverlay.jsx`)
+*   **Import**: Replace `next-auth/react` imports with `firebase/auth`.
+*   **Login**: Use `signInWithEmailAndPassword`.
+*   **Register**: 
+    1.  Use `createUserWithEmailAndPassword`.
+    2.  Update profile with `updateProfile` (to set Display Name).
+    3.  Call `sendEmailVerification` immediately after creation.
+    4.  Show alert: "Registro exitoso. Por favor verifica tu correo."
 
-### Frontend (Next.js / React)
-**File:** `src/app/admin/dashboard/page.jsx`
+### 3. Session Management (`src/context/AuthContext.jsx` - Optional but recommended)
+*   Create a React Context to wrap the app and listen to `onAuthStateChanged`.
+*   Or update `Navbar.jsx` to direct listening if keeping it simple.
 
-1.  **Dashboard Component**:
-    *   **KPI Cards**: Show "Total User Balance" (Risk) and other stats.
-    *   **User Management Section**:
-        *   Input field to search by email.
-        *   Display result with "Edit Balance" and "Ban User" buttons.
-        *   Modals/Prompts for confirmation.
-    *   **System Control**:
-        *   Toggle Switch for "Maintenance Mode".
-    *   **Security**:
-        *   Client-side check to redirect if not `nexjmr07@gmail.com`.
+### 4. Admin Check
+*   Update logic to check `user.email === 'nexjmr07@gmail.com'` from the Firebase user object.
 
 ## Verification Plan
-
-### Automated/Manual Tests
-1.  **Backend Verification**:
-    *   Use `curl` or browser to hit `/api/admin/stats` and verify `total_liability` is returned.
-    *   Test maintenance toggle and verify persistence in D1.
-2.  **Frontend Verification**:
-    *   Login as `nexjmr07@gmail.com` -> Navigate to `/admin/dashboard`.
-    *   Login as regular user -> Attempt navigation -> Should redirect.
-    *   **Risk Display**: Register a new user, add balance, refresh dashboard -> Total Risk should increase.
-    *   **Ban User**: Search user -> Click Ban -> Check user status in DB or try to login as that user.
+1.  **Register**: Create account -> Verify Alert -> Check Firebase Console (if access available) or check mock behavior.
+2.  **Verify Email**: Ensure the verification flow triggers (simulated or real if keys provided).
+3.  **Login**: Ensure login works with created credentials.
