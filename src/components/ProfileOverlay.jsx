@@ -88,23 +88,7 @@ const ProfileOverlay = ({ isOpen, onClose, user, onLogout }) => {
                     </button>
                 </div>
 
-                {/* Danger Zone */}
-                <div className="border border-red-500/20 bg-red-500/5 rounded-2xl p-6 relative">
-                    <h4 className="text-lg font-bold text-white mb-2">Zona de Peligro</h4>
-                    <p className="text-xs text-gray-400 mb-4">La siguiente acción es permanente y no se puede deshacer.</p>
 
-                    <button
-                        onClick={() => {
-                            if (confirm("¿Estás seguro de que quieres eliminar tu cuenta?")) {
-                                alert("Funcionalidad en desarrollo");
-                            }
-                        }}
-                        className="flex items-center gap-2 bg-red-900/30 hover:bg-red-900/50 text-red-500 hover:text-red-400 border border-red-500/20 px-4 py-2 rounded-xl text-sm font-bold transition-all"
-                    >
-                        <AlertTriangle size={16} />
-                        Eliminar Mi Cuenta
-                    </button>
-                </div>
 
                 {/* Logout Button (Bottom Right or separate) */}
                 <div className="mt-8 pt-6 border-t border-white/5 flex justify-end">

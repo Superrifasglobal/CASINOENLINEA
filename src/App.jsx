@@ -8,13 +8,14 @@ import { supabase } from './lib/supabase';
 import AuthOverlay from './components/AuthOverlay';
 import ProfileOverlay from './components/ProfileOverlay';
 import NeonSlots from './components/NeonSlots';
+import CrashGame from './components/CrashGame';
 
 // Import game card images or use placeholders
 const demoGames = [
   { id: 1, title: 'Royal Roulette', category: 'Table Games', image: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80', active: true },
   { id: 2, title: 'Neon Slots', category: 'Slots', image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?auto=format&fit=crop&q=80', active: false },
-  { id: 3, title: 'Quantum Blackjack', category: 'Cards', image: 'https://images.unsplash.com/photo-1518893063934-f71420a2333e?auto=format&fit=crop&q=80', active: false },
-  { id: 4, title: 'Astro Dice', category: 'Dice', image: 'https://images.unsplash.com/photo-1533132205560-6364f33fd24b?auto=format&fit=crop&q=80', active: false },
+  { id: 3, title: 'Gravity Crash', category: 'Originals', image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80', active: true },
+  { id: 4, title: 'Quantum Blackjack', category: 'Cards', image: 'https://images.unsplash.com/photo-1518893063934-f71420a2333e?auto=format&fit=crop&q=80', active: false },
 ];
 
 function App() {
@@ -49,6 +50,7 @@ function App() {
         setUser(null);
         setBalance(0);
         setIsAdmin(false);
+        setShowProfile(false);
       }
     });
 
@@ -90,6 +92,7 @@ function App() {
       await supabase.auth.signOut();
       setUser(null);
       setBalance(0);
+      setIsAdmin(false);
       setIsAdmin(false);
       setShowProfile(false);
     } catch (error) {
@@ -137,6 +140,8 @@ function App() {
             </div>
           ) : activeGame === 'slots' ? (
             <NeonSlots user={user} balance={balance} onBalanceUpdate={refreshBalance} onBack={() => setActiveGame(null)} />
+          ) : activeGame === 'crash' ? (
+            <CrashGame user={user} balance={balance} onBalanceUpdate={refreshBalance} onBack={() => setActiveGame(null)} />
           ) : (
             <>
               <div className="mb-12">
@@ -162,6 +167,7 @@ function App() {
                     <div key={game.id} onClick={() => {
                       if (game.id === 1) setActiveGame('roulette');
                       if (game.id === 2) setActiveGame('slots');
+                      if (game.id === 3) setActiveGame('crash');
                     }}>
                       <GameCard {...game} />
                     </div>
