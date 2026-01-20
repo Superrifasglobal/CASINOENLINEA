@@ -3,7 +3,7 @@ import { Bell, Search, Wallet, User as UserIcon, Menu } from 'lucide-react';
 import { motion } from 'framer-motion';
 import WalletManager from './WalletManager';
 
-const Header = ({ user, balance, onLoginClick }) => {
+const Header = ({ user, balance, onLoginClick, onProfileClick }) => {
     return (
         <header className="h-20 flex items-center justify-between px-4 md:px-8 z-40 relative">
             <div className="flex items-center gap-4 md:hidden">
@@ -46,7 +46,7 @@ const Header = ({ user, balance, onLoginClick }) => {
                     </button>
 
                     <button
-                        onClick={user ? undefined : onLoginClick}
+                        onClick={user ? onProfileClick : onLoginClick}
                         className="flex items-center gap-2 pl-3 pr-1 py-1 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] border border-white/5 hover:border-white/20 transition-all group"
                     >
                         <div className="flex items-center gap-3 px-2">
@@ -58,7 +58,11 @@ const Header = ({ user, balance, onLoginClick }) => {
                         </div>
                         <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-neon-purple to-neon-blue p-[1px] shadow-lg">
                             <div className="w-full h-full rounded-xl bg-background flex items-center justify-center">
-                                <UserIcon size={18} className="text-white group-hover:text-neon-blue transition-colors" />
+                                {user ? (
+                                    <span className="text-xs font-bold">{user.username ? user.username[0].toUpperCase() : 'U'}</span>
+                                ) : (
+                                    <UserIcon size={18} className="text-white group-hover:text-neon-blue transition-colors" />
+                                )}
                             </div>
                         </div>
                     </button>

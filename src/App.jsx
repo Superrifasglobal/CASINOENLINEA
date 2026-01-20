@@ -6,6 +6,8 @@ import AntigravityPanel from './components/AntigravityPanel';
 import AdminDashboard from './components/admin/AdminDashboard';
 import { supabase } from './lib/supabase';
 import AuthOverlay from './components/AuthOverlay';
+import ProfileOverlay from './components/ProfileOverlay';
+import NeonSlots from './components/NeonSlots';
 
 // Import game card images or use placeholders
 const demoGames = [
@@ -21,6 +23,8 @@ function App() {
   const [user, setUser] = useState(null);
   const [balance, setBalance] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
+  const [showProfile, setShowProfile] = useState(false);
+  const [activeGame, setActiveGame] = useState(null);
 
   // Sync user from Supabase
   useEffect(() => {
@@ -87,6 +91,7 @@ function App() {
       setUser(null);
       setBalance(0);
       setIsAdmin(false);
+      setShowProfile(false);
     } catch (error) {
       console.error('Error logging out:', error);
     }
@@ -116,23 +121,56 @@ function App() {
       <Sidebar activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
 
       <div className="flex-1 flex flex-col relative overflow-hidden">
-        <Header user={user} balance={balance} onLoginClick={() => setShowAuth(true)} />
+        <Header
+          user={user}
+          balance={balance}
+          onLoginClick={() => setShowAuth(true)}
+          onProfileClick={() => setShowProfile(true)}
+        />
 
         <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative z-10">
-          <AntigravityPanel user={user} balance={balance} onBalanceUpdate={refreshBalance} />
 
-          <div className="mt-12">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-2xl font-bold tracking-tight">Featured Games</h2>
-              <button className="text-neon-green text-sm font-medium hover:underline">View All</button>
+          {activeGame === 'roulette' ? (
+            <div className="max-w-6xl mx-auto">
+              <button onClick={() => setActiveGame(null)} className="mb-4 text-gray-400 hover:text-white">← Volver al Lobby</button>
+              <AntigravityPanel user={user} balance={balance} onBalanceUpdate={refreshBalance} />
             </div>
+          ) : activeGame === 'slots' ? (
+            <NeonSlots user={user} balance={balance} onBalanceUpdate={refreshBalance} onBack={() => setActiveGame(null)} />
+          ) : (
+            <>
+              <div className="mb-12">
+                <h1 className="text-4xl md:text-5xl font-black italic mb-6 tracking-tighter">WELCOME TO ANTIGRAVITY</h1>
+                <div className="relative h-[400px] w-full rounded-[2.5rem] overflow-hidden group cursor-pointer border border-white/10 shadow-2xl" onClick={() => setActiveGame('roulette')}>
+                  <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent z-10 p-12 flex flex-col justify-center">
+                    <span className="text-neon-green font-bold tracking-widest uppercase mb-2">Juego Destacado</span>
+                    <h2 className="text-6xl font-black text-white mb-4">ROYAL ROULETTE</h2>
+                    <p className="text-xl text-gray-300 mb-8 max-w-lg">Experimenta la emoción de la ruleta en gravedad cero. Multiplicadores en vivo y pagos instantáneos.</p>
+                    <button className="bg-white text-black px-8 py-4 rounded-full font-black w-fit hover:scale-105 transition-transform hover:bg-neon-green hover:shadow-[0_0_30px_#00ff9d]">JUGAR AHORA</button>
+                  </div>
+                  <img src="https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=2574&auto=format&fit=crop" className="absolute inset-0 w-full h-full object-cover opacity-60 group-hover:scale-110 transition-transform duration-700" alt="Roulette Banner" />
+                </div>
+              </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {demoGames.map((game) => (
-                <GameCard key={game.id} {...game} />
-              ))}
-            </div>
-          </div>
+              <div className="mt-12">
+                <div className="flex items-center justify-between mb-8">
+                  <h2 className="text-2xl font-bold tracking-tight">Todos los Juegos</h2>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {demoGames.map((game) => (
+                    <div key={game.id} onClick={() => {
+                      if (game.id === 1) setActiveGame('roulette');
+                      if (game.id === 2) setActiveGame('slots');
+                    }}>
+                      <GameCard {...game} />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </>
+          )}
+
         </main>
 
         {(user && user.role === 'admin') && (
@@ -148,6 +186,13 @@ function App() {
       <AuthOverlay
         isOpen={showAuth}
         onClose={() => setShowAuth(false)}
+      />
+
+      <ProfileOverlay
+        isOpen={showProfile}
+        onClose={() => setShowProfile(false)}
+        user={user}
+        onLogout={handleLogout}
       />
 
       {/* Ambient background gradients */}

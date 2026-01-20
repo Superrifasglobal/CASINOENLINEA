@@ -1,16 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Rocket, X, AlertCircle, User, Facebook, Chrome } from 'lucide-react';
-import { auth } from '../lib/firebase';
-import { 
-    signInWithPopup, 
-    GoogleAuthProvider, 
-    FacebookAuthProvider, 
-    createUserWithEmailAndPassword, 
-    signInWithEmailAndPassword, 
-    updateProfile, 
-    sendEmailVerification 
-} from 'firebase/auth';
+import { Mail, Lock, Rocket, X, AlertCircle, User, Chrome, Github } from 'lucide-react';
+import { supabase } from '../lib/supabase';
 
 const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -23,43 +14,30 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
     const handleAuthSuccess = (user) => {
         if (onAuthSuccess && typeof onAuthSuccess === 'function') {
             onAuthSuccess({
-                id: user.uid,
+                id: user.id,
                 email: user.email,
-                displayName: user.displayName || user.email?.split('@')[0],
-                photoURL: user.photoURL,
-                emailVerified: user.emailVerified,
-                balance: 0 // In a real app, fetch this from DB
+                username: user.user_metadata?.display_name || user.email?.split('@')[0],
+                // Add other fields as needed
             });
         }
         onClose();
     };
 
-    const handleSocialLogin = async (providerName) => {
+    const handleSocialLogin = async (provider) => {
         setLoading(true);
         setError('');
         try {
-            let provider;
-            if (providerName === 'google') {
-                provider = new GoogleAuthProvider();
-            } else if (providerName === 'facebook') {
-                provider = new FacebookAuthProvider();
-            }
+            const { data, error } = await supabase.auth.signInWithOAuth({
+                provider: provider,
+            });
 
-            const result = await signInWithPopup(auth, provider);
-            handleAuthSuccess(result.user);
+            if (error) throw error;
+            // Provide OAuth doesn't immediately return user data in the same way, usually redirects.
+            // But we can catch errors here.
+
         } catch (err) {
             console.error("Social Auth Error:", err);
-            let msg = "Error al iniciar sesión con " + providerName;
-            if (err.code === 'auth/account-exists-with-different-credential') {
-                msg = "Ya existe una cuenta con el mismo correo electrónico pero diferentes credenciales de inicio de sesión.";
-            } else if (err.code === 'auth/popup-closed-by-user') {
-                msg = "La ventana de inicio de sesión se cerró antes de completar el proceso.";
-            } else if (err.code === 'auth/cancelled-popup-request') {
-                msg = "Solo se permite una solicitud de ventana emergente a la vez.";
-            } else if (err.code === 'auth/popup-blocked') {
-                msg = "El navegador bloqueó la ventana emergente. Por favor, permítela para continuar.";
-            }
-            setError(msg);
+            setError(err.message);
         } finally {
             setLoading(false);
         }
@@ -73,50 +51,43 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
         try {
             if (isLogin) {
                 // Login
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                handleAuthSuccess(userCredential.user);
-            } else {
-                // Register
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
-
-                // Update Profile
-                await updateProfile(user, {
-                    displayName: displayName
+                const { data, error } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
                 });
 
-                // Send Verification Email
-                await sendEmailVerification(user);
-                
-                alert(`¡Cuenta creada! Se ha enviado un correo de verificación a ${email}`);
-                handleAuthSuccess(user);
+                if (error) throw error;
+                if (data.user) {
+                    handleAuthSuccess(data.user);
+                }
+            } else {
+                // Register
+                const { data, error } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            display_name: displayName,
+                        },
+                    },
+                });
+
+                if (error) throw error;
+
+                if (data.user) {
+                    alert(`¡Cuenta creada! Revisa tu correo (${email}) para confirmar tu cuenta.`);
+                    // Automatically switch to login or close?
+                    // Usually Supabase requires email verification by default, so maybe don't auto-login unless disabled.
+                    if (!data.session) {
+                        setIsLogin(true); // Switch to login view so they can try after verifying
+                    } else {
+                        handleAuthSuccess(data.user);
+                    }
+                }
             }
         } catch (err) {
             console.error("Auth Error:", err);
-            let msg = "Error de autenticación";
-            switch (err.code) {
-                case 'auth/invalid-email':
-                    msg = "El correo electrónico no es válido.";
-                    break;
-                case 'auth/user-disabled':
-                    msg = "Esta cuenta ha sido deshabilitada.";
-                    break;
-                case 'auth/user-not-found':
-                    msg = "No se encontró ninguna cuenta con este correo.";
-                    break;
-                case 'auth/wrong-password':
-                    msg = "Contraseña incorrecta.";
-                    break;
-                case 'auth/email-already-in-use':
-                    msg = "Este correo electrónico ya está en uso.";
-                    break;
-                case 'auth/weak-password':
-                    msg = "La contraseña es muy débil (mínimo 6 caracteres).";
-                    break;
-                default:
-                    msg = err.message;
-            }
-            setError(msg);
+            setError(err.message || "Error de autenticación");
         } finally {
             setLoading(false);
         }
@@ -168,13 +139,14 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
                         <Chrome size={20} className="text-white group-hover:text-neon-blue transition-colors" />
                         <span className="text-xs font-bold uppercase tracking-wider text-gray-300">Google</span>
                     </button>
+                    {/* Github instead of Facebook for Supabase defaults often, but can be anything */}
                     <button
-                        onClick={() => handleSocialLogin('facebook')}
+                        onClick={() => handleSocialLogin('github')}
                         disabled={loading}
                         className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-all group"
                     >
-                        <Facebook size={20} className="text-white group-hover:text-blue-500 transition-colors" />
-                        <span className="text-xs font-bold uppercase tracking-wider text-gray-300">Facebook</span>
+                        <Github size={20} className="text-white group-hover:text-purple-500 transition-colors" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-300">Github</span>
                     </button>
                 </div>
 
