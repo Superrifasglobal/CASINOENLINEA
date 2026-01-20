@@ -16,180 +16,190 @@ import { SlotEngine } from './services/slots';
 import { XPService, RANKS } from './services/xp';
 import { AdminContractService } from './services/contract';
 import { BlackjackService } from './services/blackjack';
-export const onRequest: PagesFunction<Env> = async (context) => {
-    const { request, env } = context;
-    const url = new URL(request.url);
-    const userId = url.searchParams.get('userId') || 'user_123';
+// 0. AUTH Endpoints
+if (url.pathname === '/api/auth/register' && request.method === 'POST') {
+    const { username, password } = await request.json() as any;
+    return handleRegister(username, password, env);
+}
+if (url.pathname === '/api/auth/login' && request.method === 'POST') {
+    const { username, password } = await request.json() as any;
+    return handleLogin(username, password, env);
+}
+if (url.pathname === '/api/auth/me') {
+    const user = await verifyAuth(request, env);
+    if (!user) return new Response('Unauthorized', { status: 401 });
+    return Response.json(user);
+}
 
-    // 1. PUBLIC Endpoints (no auth for demo, but typically would have user auth)
-    if (url.pathname === '/api/getBalance') return handleGetBalance(userId, env);
-    if (url.pathname === '/api/roulette/spin' && request.method === 'POST') {
-        const { amount, betType, betValue } = await request.json() as { amount: number, betType: string, betValue: string | number };
-        return handleRouletteSpin(userId, amount, betType, betValue, env);
-    }
-    if (url.pathname === '/api/getXP') return handleGetXP(userId, env);
-    if (url.pathname === '/api/placeBet' && request.method === 'POST') {
-        const { amount } = await request.json() as { amount: number };
-        return handlePlaceBet(userId, amount, env);
-    }
-    if (url.pathname === '/api/claimPrize' && request.method === 'POST') {
-        const { amount, seed } = await request.json() as { amount: number, seed: string };
-        const response = await handleClaimPrize(userId, amount, env);
+// 1. PUBLIC Endpoints
+if (url.pathname === '/api/getBalance') return handleGetBalance(userId, env);
+if (url.pathname === '/api/roulette/spin' && request.method === 'POST') {
+    const { amount, betType, betValue } = await request.json() as { amount: number, betType: string, betValue: string | number };
+    return handleRouletteSpin(userId, amount, betType, betValue, env);
+}
+if (url.pathname === '/api/getXP') return handleGetXP(userId, env);
+if (url.pathname === '/api/placeBet' && request.method === 'POST') {
+    const { amount } = await request.json() as { amount: number };
+    return handlePlaceBet(userId, amount, env);
+}
+if (url.pathname === '/api/claimPrize' && request.method === 'POST') {
+    const { amount, seed } = await request.json() as { amount: number, seed: string };
+    const response = await handleClaimPrize(userId, amount, env);
 
-        // Audit high-value wins (> $100) or suspicious patterns
-        if (response.status === 200 && amount > 100) {
-            await auditLogger(userId, amount, seed, request, env);
-        }
-
-        return response;
-    }
-
-    // 2. WALLET Endpoints
-    const walletService = new WalletService(env);
-    if (url.pathname === '/api/verify-deposit' && request.method === 'POST') {
-        const { txHash, amount } = await request.json() as { txHash: string, amount: string };
-        try {
-            const result = await walletService.verifyDeposit(userId, txHash, amount);
-            return Response.json(result);
-        } catch (e: any) {
-            return new Response(e.message, { status: 400 });
-        }
-    }
-    if (url.pathname === '/api/withdraw' && request.method === 'POST') {
-        const { amount, destinationWallet } = await request.json() as { amount: number, destinationWallet: string };
-        try {
-            const result = await walletService.initiateWithdrawal(userId, amount, destinationWallet);
-            return Response.json(result);
-        } catch (e: any) {
-            return new Response(e.message, { status: 400 });
-        }
+    // Audit high-value wins (> $100) or suspicious patterns
+    if (response.status === 200 && amount > 100) {
+        await auditLogger(userId, amount, seed, request, env);
     }
 
-    // Binance Pay Endpoints
-    const binanceService = new BinanceService(env as any);
-    if (url.pathname === '/api/binance/create' && request.method === 'POST') {
-        const { amount, currency } = await request.json() as { amount: number, currency: string };
-        try {
-            const result = await binanceService.createOrder(userId, amount, currency);
-            return Response.json(result);
-        } catch (e: any) {
-            return new Response(e.message, { status: 400 });
-        }
+    return response;
+}
+
+// 2. WALLET Endpoints
+const walletService = new WalletService(env);
+if (url.pathname === '/api/verify-deposit' && request.method === 'POST') {
+    const { txHash, amount } = await request.json() as { txHash: string, amount: string };
+    try {
+        const result = await walletService.verifyDeposit(userId, txHash, amount);
+        return Response.json(result);
+    } catch (e: any) {
+        return new Response(e.message, { status: 400 });
     }
-    if (url.pathname === '/api/binance/webhook' && request.method === 'POST') {
-        const payload = await request.json();
-        const signature = request.headers.get('BinancePay-Signature') || '';
-        const timestamp = request.headers.get('BinancePay-Timestamp') || '';
-        const nonce = request.headers.get('BinancePay-Nonce') || '';
-        try {
-            const result = await binanceService.handleWebhook(payload, signature, timestamp, nonce);
-            return Response.json(result);
-        } catch (e: any) {
-            return new Response(e.message, { status: 400 });
-        }
+}
+if (url.pathname === '/api/withdraw' && request.method === 'POST') {
+    const { amount, destinationWallet } = await request.json() as { amount: number, destinationWallet: string };
+    try {
+        const result = await walletService.initiateWithdrawal(userId, amount, destinationWallet);
+        return Response.json(result);
+    } catch (e: any) {
+        return new Response(e.message, { status: 400 });
+    }
+}
+
+// Binance Pay Endpoints
+const binanceService = new BinanceService(env as any);
+if (url.pathname === '/api/binance/create' && request.method === 'POST') {
+    const { amount, currency } = await request.json() as { amount: number, currency: string };
+    try {
+        const result = await binanceService.createOrder(userId, amount, currency);
+        return Response.json(result);
+    } catch (e: any) {
+        return new Response(e.message, { status: 400 });
+    }
+}
+if (url.pathname === '/api/binance/webhook' && request.method === 'POST') {
+    const payload = await request.json();
+    const signature = request.headers.get('BinancePay-Signature') || '';
+    const timestamp = request.headers.get('BinancePay-Timestamp') || '';
+    const nonce = request.headers.get('BinancePay-Nonce') || '';
+    try {
+        const result = await binanceService.handleWebhook(payload, signature, timestamp, nonce);
+        return Response.json(result);
+    } catch (e: any) {
+        return new Response(e.message, { status: 400 });
+    }
+}
+
+// 3. ADMIN Endpoints (JWT Protected)
+if (url.pathname.startsWith('/api/admin/')) {
+    const authError = await verifyAdmin(request, env);
+    if (authError) return authError;
+
+    if (url.pathname === '/api/admin/stats') return handleGetStats(env);
+    if (url.pathname === '/api/admin/update-odds' && request.method === 'POST') {
+        const { rtp } = await request.json() as { rtp: number };
+        return handleUpdateRTP(rtp, env);
+    }
+    if (url.pathname === '/api/admin/user-action' && request.method === 'POST') {
+        const data = await request.json() as { targetUserId: string, action: string, value?: number };
+        return handleUserAction(data, env);
+    }
+    // Roulette Admin
+    if (url.pathname === '/api/admin/roulette/rtp' && request.method === 'POST') {
+        const { rtp, bias } = await request.json() as { rtp: number, bias?: number };
+        return handleUpdateRouletteRTP(rtp, bias, env);
+    }
+    if (url.pathname === '/api/admin/roulette/history') {
+        return handleGetRouletteHistory(env);
+    }
+    if (url.pathname === '/api/admin/system/live') {
+        return handleGetLiveCount(env);
     }
 
-    // 3. ADMIN Endpoints (JWT Protected)
-    if (url.pathname.startsWith('/api/admin/')) {
-        const authError = await verifyAdmin(request, env);
-        if (authError) return authError;
+    // 4. BLACKJACK Endpoints
+    const blackjackService = new BlackjackService(env.DB);
+    const userId = url.searchParams.get('userId') || 'guest';
 
-        if (url.pathname === '/api/admin/stats') return handleGetStats(env);
-        if (url.pathname === '/api/admin/update-odds' && request.method === 'POST') {
-            const { rtp } = await request.json() as { rtp: number };
-            return handleUpdateRTP(rtp, env);
-        }
-        if (url.pathname === '/api/admin/user-action' && request.method === 'POST') {
-            const data = await request.json() as { targetUserId: string, action: string, value?: number };
-            return handleUserAction(data, env);
-        }
-        // Roulette Admin
-        if (url.pathname === '/api/admin/roulette/rtp' && request.method === 'POST') {
-            const { rtp, bias } = await request.json() as { rtp: number, bias?: number };
-            return handleUpdateRouletteRTP(rtp, bias, env);
-        }
-        if (url.pathname === '/api/admin/roulette/history') {
-            return handleGetRouletteHistory(env);
-        }
-        if (url.pathname === '/api/admin/system/live') {
-            return handleGetLiveCount(env);
-        }
+    if (url.pathname === '/api/blackjack/start' && request.method === 'POST') {
+        const { bet } = await request.json() as any;
+        const state = await blackjackService.initGame(userId, bet);
+        await blackjackService.saveGameState(userId, state);
+        return Response.json({ success: true, state });
+    }
 
-        // 4. BLACKJACK Endpoints
-        const blackjackService = new BlackjackService(env.DB);
-        const userId = url.searchParams.get('userId') || 'guest';
+    if (url.pathname === '/api/blackjack/hit' && request.method === 'POST') {
+        let state = await blackjackService.getGameState(userId);
+        if (!state) return new Response('No active game', { status: 400 });
+        state = await blackjackService.hit(state);
+        await blackjackService.saveGameState(userId, state);
+        return Response.json({ success: true, state });
+    }
 
-        if (url.pathname === '/api/blackjack/start' && request.method === 'POST') {
-            const { bet } = await request.json() as any;
-            const state = await blackjackService.initGame(userId, bet);
+    if (url.pathname === '/api/blackjack/stand' && request.method === 'POST') {
+        let state = await blackjackService.getGameState(userId);
+        if (!state) return new Response('No active game', { status: 400 });
+        state = await blackjackService.stand(state);
+
+        // Process winnings if game ended
+        if (state.status !== 'playing') {
+            let multiplier = 0;
+            if (state.status === 'player_win') multiplier = 2;
+            if (state.status === 'blackjack') multiplier = 2.5;
+            if (state.status === 'push') multiplier = 1;
+
+            const winAmount = state.bet * multiplier;
+
+            // Update D1: Balance, Bets history, and XP
+            const xpService = new XPService(env.DB);
+            const operations = [
+                env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').bind(winAmount, userId),
+                env.DB.prepare('INSERT INTO bets (user_id, game_type, bet_amount, win_amount, timestamp) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)')
+                    .bind(userId, 'blackjack', state.bet, winAmount)
+            ];
+            await env.DB.batch(operations);
+            await xpService.addXP(userId, state.bet);
+
+            await blackjackService.clearGameState(userId);
+        } else {
             await blackjackService.saveGameState(userId, state);
-            return Response.json({ success: true, state });
         }
-
-        if (url.pathname === '/api/blackjack/hit' && request.method === 'POST') {
-            let state = await blackjackService.getGameState(userId);
-            if (!state) return new Response('No active game', { status: 400 });
-            state = await blackjackService.hit(state);
-            await blackjackService.saveGameState(userId, state);
-            return Response.json({ success: true, state });
-        }
-
-        if (url.pathname === '/api/blackjack/stand' && request.method === 'POST') {
-            let state = await blackjackService.getGameState(userId);
-            if (!state) return new Response('No active game', { status: 400 });
-            state = await blackjackService.stand(state);
-
-            // Process winnings if game ended
-            if (state.status !== 'playing') {
-                let multiplier = 0;
-                if (state.status === 'player_win') multiplier = 2;
-                if (state.status === 'blackjack') multiplier = 2.5;
-                if (state.status === 'push') multiplier = 1;
-
-                const winAmount = state.bet * multiplier;
-
-                // Update D1: Balance, Bets history, and XP
-                const xpService = new XPService(env.DB);
-                const operations = [
-                    env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').bind(winAmount, userId),
-                    env.DB.prepare('INSERT INTO bets (user_id, game_type, bet_amount, win_amount, timestamp) VALUES (?, ?, ?, ?, CURRENT_TIMESTAMP)')
-                        .bind(userId, 'blackjack', state.bet, winAmount)
-                ];
-                await env.DB.batch(operations);
-                await xpService.addXP(userId, state.bet);
-
-                await blackjackService.clearGameState(userId);
-            } else {
-                await blackjackService.saveGameState(userId, state);
-            }
-            return Response.json({ success: true, state });
-        }
-
-        // New Admin Endpoints
-        if (url.pathname === '/api/admin/vault') return handleGetVaultStats(env);
-        if (url.pathname === '/api/admin/users-list') {
-            const page = parseInt(url.searchParams.get('page') || '1');
-            return handleGetUsersList(page, env);
-        }
-
-        // Contract Admin Endpoints
-        const contractService = new AdminContractService(env);
-        if (url.pathname === '/api/admin/contract/stats') {
-            const report = await contractService.getAuditReport();
-            return Response.json({ success: true, ...report });
-        }
-        if (url.pathname === '/api/admin/contract/withdraw' && request.method === 'POST') {
-            const { to, amount } = await request.json() as any;
-            try {
-                const hash = await contractService.adminWithdraw(to, amount);
-                return Response.json({ success: true, txHash: hash });
-            } catch (e: any) {
-                return new Response(e.message, { status: 400 });
-            }
-        }
+        return Response.json({ success: true, state });
     }
 
-    return new Response('Not Found', { status: 404 });
+    // New Admin Endpoints
+    if (url.pathname === '/api/admin/vault') return handleGetVaultStats(env);
+    if (url.pathname === '/api/admin/users-list') {
+        const page = parseInt(url.searchParams.get('page') || '1');
+        return handleGetUsersList(page, env);
+    }
+
+    // Contract Admin Endpoints
+    const contractService = new AdminContractService(env);
+    if (url.pathname === '/api/admin/contract/stats') {
+        const report = await contractService.getAuditReport();
+        return Response.json({ success: true, ...report });
+    }
+    if (url.pathname === '/api/admin/contract/withdraw' && request.method === 'POST') {
+        const { to, amount } = await request.json() as any;
+        try {
+            const hash = await contractService.adminWithdraw(to, amount);
+            return Response.json({ success: true, txHash: hash });
+        } catch (e: any) {
+            return new Response(e.message, { status: 400 });
+        }
+    }
+}
+
+return new Response('Not Found', { status: 404 });
 };
 
 const slotEngine = new SlotEngine();
@@ -231,20 +241,130 @@ async function notifyFraud(userId: string, count: number, env: Env) {
 }
 
 /**
- * Poor man's JWT verification (Demo purposes, usually uses a library)
+ * JWT verification for all users
+ */
+async function verifyAuth(request: Request, env: Env): Promise<any | null> {
+    const authHeader = request.headers.get('Authorization');
+    if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+    const token = authHeader.split(' ')[1];
+
+    try {
+        const [header, payload, signature] = token.split('.');
+        if (!header || !payload || !signature) return null;
+
+        const message = `${header}.${payload}`;
+        const encoder = new TextEncoder();
+        const key = await crypto.subtle.importKey(
+            'raw', encoder.encode(env.JWT_SECRET),
+            { name: 'HMAC', hash: 'SHA-256' },
+            false, ['verify']
+        );
+
+        // Convert base64url to base64
+        const sig = Uint8Array.from(atob(signature.replace(/-/g, '+').replace(/_/g, '/')), c => c.charCodeAt(0));
+        const isValid = await crypto.subtle.verify('HMAC', key, sig, encoder.encode(message));
+
+        if (!isValid) return null;
+
+        const data = JSON.parse(atob(payload));
+        if (data.exp < Math.floor(Date.now() / 1000)) return null;
+
+        return data; // { userId, username, role }
+    } catch (e) {
+        return null;
+    }
+}
+
+/**
+ * Admin verification using JWT session
  */
 async function verifyAdmin(request: Request, env: Env): Promise<Response | null> {
+    const user = await verifyAuth(request, env);
+
+    // Legacy support for the custom key if used as a token directly (for backward compatibility during migration)
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        return new Response('Unauthorized', { status: 401 });
-    }
-    // In production, use `jose` or similar library to verify JWT
-    // Here we simulate checking if the role is ADMIN from a decoded payload
-    // For this demo, we accept any token if it's "ADMIN_TOKEN"
-    if (authHeader !== 'Bearer 29971627Nex@') {
+    if (authHeader === 'Bearer 29971627Nex@') return null;
+
+    if (!user || user.role !== 'admin') {
         return new Response('Forbidden: Admin only', { status: 403 });
     }
     return null;
+}
+
+// AUTH HANDLERS
+async function handleRegister(username: string, password: string, env: Env): Promise<Response> {
+    if (!username || !password) return new Response('Missing fields', { status: 400 });
+
+    const passwordHash = await hashPassword(password);
+    const userId = crypto.randomUUID();
+
+    try {
+        await env.DB.prepare(
+            'INSERT INTO users (id, username, password_hash, role, balance) VALUES (?, ?, ?, ?, ?)'
+        ).bind(userId, username, passwordHash, 'user', 1000.0).run();
+
+        const token = await signJWT({ userId, username, role: 'user' }, env.JWT_SECRET);
+        return Response.json({ success: true, token, user: { id: userId, username, role: 'user' } });
+    } catch (e: any) {
+        if (e.message.includes('UNIQUE')) return new Response('Username already exists', { status: 409 });
+        return new Response(e.message, { status: 500 });
+    }
+}
+
+async function handleLogin(username: string, password: string, env: Env): Promise<Response> {
+    const user = await env.DB.prepare(
+        'SELECT id, username, password_hash, role FROM users WHERE username = ?'
+    ).bind(username).first<any>();
+
+    if (!user) return new Response('Invalid credentials', { status: 401 });
+
+    const passwordHash = await hashPassword(password);
+    if (user.password_hash !== passwordHash) {
+        return new Response('Invalid credentials', { status: 401 });
+    }
+
+    const token = await signJWT({ userId: user.id, username: user.username, role: user.role }, env.JWT_SECRET);
+    return Response.json({ success: true, token, user: { id: user.id, username: user.username, role: user.role } });
+}
+
+// CRYPTO HELPERS
+async function hashPassword(password: string): Promise<string> {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-256', data);
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, '0'))
+        .join('');
+}
+
+async function signJWT(payload: any, secret: string): Promise<string> {
+    const encoder = new TextEncoder();
+
+    const header = btoa(JSON.stringify({ alg: 'HS256', typ: 'JWT' }))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    const extendedPayload = {
+        ...payload,
+        exp: Math.floor(Date.now() / 1000) + (86400 * 7), // 7 days
+        iat: Math.floor(Date.now() / 1000)
+    };
+
+    const encodedPayload = btoa(JSON.stringify(extendedPayload))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    const message = `${header}.${encodedPayload}`;
+
+    const key = await crypto.subtle.importKey(
+        'raw', encoder.encode(secret),
+        { name: 'HMAC', hash: 'SHA-256' },
+        false, ['sign']
+    );
+
+    const signature = await crypto.subtle.sign('HMAC', key, encoder.encode(message));
+    const encodedSignature = btoa(String.fromCharCode(...new Uint8Array(signature)))
+        .replace(/\+/g, '-').replace(/\//g, '_').replace(/=/g, '');
+
+    return `${message}.${encodedSignature}`;
 }
 
 async function handleRouletteSpin(userId: string, betAmount: number, betType: string, betValue: string | number, env: Env): Promise<Response> {

@@ -18,7 +18,7 @@ export default function RouletteAdmin() {
     const fetchHistory = async () => {
         try {
             const res = await fetch('/api/admin/roulette/history', {
-                headers: { 'Authorization': 'Bearer ADMIN_TOKEN' }
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || '29971627Nex@'}` }
             });
             const data = await res.json();
             if (data.history) setHistory(data.history);
@@ -30,7 +30,7 @@ export default function RouletteAdmin() {
     const fetchLiveCount = async () => {
         try {
             const res = await fetch('/api/admin/system/live', {
-                headers: { 'Authorization': 'Bearer ADMIN_TOKEN' }
+                headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || '29971627Nex@'}` }
             });
             const data = await res.json();
             if (data.count !== undefined) setLiveCount(data.count);
@@ -44,7 +44,7 @@ export default function RouletteAdmin() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer 29971627Nex@'
+                    'Authorization': `Bearer ${localStorage.getItem('token') || '29971627Nex@'}`
                 },
                 body: JSON.stringify({ rtp })
             });

@@ -17,7 +17,7 @@ const VaultCard = () => {
         const fetchStats = async () => {
             try {
                 const res = await fetch('/api/admin/vault', {
-                    headers: { 'Authorization': 'Bearer 29971627Nex@' }
+                    headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || '29971627Nex@'}` }
                 });
                 const data = await res.json();
                 setStats(data.vault);

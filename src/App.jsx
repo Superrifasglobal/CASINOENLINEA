@@ -3,9 +3,11 @@ import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import GameCard from './components/GameCard';
 import AntigravityPanel from './components/AntigravityPanel';
+import AdminDashboard from './components/admin/AdminDashboard';
 import { AdminLayout } from './components/admin/AdminLayout';
 import { AdminStats, AdminPerformanceChart } from './components/admin/AdminStats';
 import { AdminTable } from './components/admin/AdminTable';
+import AuthOverlay from './components/AuthOverlay';
 
 // Import game card images or use placeholders
 const demoGames = [
@@ -19,29 +21,23 @@ function App() {
   const [activeCategory, setActiveCategory] = useState('All Games');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminView, setAdminView] = useState('summary');
+  const [user, setUser] = useState(() => {
+    const saved = localStorage.getItem('user');
+    return saved ? JSON.parse(saved) : null;
+  });
+  const [showAuth, setShowAuth] = useState(false);
 
   if (isAdmin) {
     return (
-      <AdminLayout activeView={adminView} setActiveView={setAdminView}>
-        {adminView === 'summary' && (
-          <>
-            <AdminStats />
-            <AdminPerformanceChart />
-            <AdminTable />
-          </>
-        )}
-        {adminView !== 'summary' && (
-          <div className="p-10 text-center text-gray-500 bg-surface border border-white/5 rounded-2xl border-dashed">
-            La vista {adminView} está en desarrollo.
-          </div>
-        )}
+      <div className="relative">
+        <AdminDashboard />
         <button
           onClick={() => setIsAdmin(false)}
-          className="fixed bottom-8 right-8 bg-neon-purple text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider hover:scale-105 transition-transform z-50 shadow-[0_0_15px_rgba(176,38,255,0.4)]"
+          className="fixed bottom-8 right-8 bg-neon-purple text-white px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider hover:scale-105 transition-transform z-[100] shadow-[0_0_15px_rgba(176,38,255,0.4)]"
         >
           Volver al Casino
         </button>
-      </AdminLayout>
+      </div>
     );
   }
 
@@ -50,7 +46,7 @@ function App() {
       <Sidebar activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
 
       <div className="flex-1 flex flex-col relative overflow-hidden">
-        <Header />
+        <Header user={user} onLoginClick={() => setShowAuth(true)} />
 
         <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative z-10">
           <AntigravityPanel />
@@ -69,13 +65,21 @@ function App() {
           </div>
         </main>
 
-        <button
-          onClick={() => setIsAdmin(true)}
-          className="absolute bottom-8 right-8 bg-neon-purple/20 border border-neon-purple/30 text-neon-purple px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider hover:bg-neon-purple hover:text-white transition-all z-50"
-        >
-          Admin Mode
-        </button>
+        {(user && user.role === 'admin') && (
+          <button
+            onClick={() => setIsAdmin(true)}
+            className="absolute bottom-8 right-8 bg-neon-purple/20 border border-neon-purple/30 text-neon-purple px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider hover:bg-neon-purple hover:text-white transition-all z-50"
+          >
+            Admin Mode
+          </button>
+        )}
       </div>
+
+      <AuthOverlay
+        isOpen={showAuth}
+        onClose={() => setShowAuth(false)}
+        onAuthSuccess={setUser}
+      />
 
       {/* Ambient background gradients */}
       <div className="fixed top-0 left-0 w-full h-full pointer-events-none overflow-hidden z-0">
