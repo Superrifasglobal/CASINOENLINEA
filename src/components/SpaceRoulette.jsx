@@ -3,13 +3,17 @@ import { Canvas, useFrame } from '@react-three/fiber';
 import { Stars, Float, PerspectiveCamera, MeshDistortMaterial, MeshWobbleMaterial, Sparkles, OrbitControls } from '@react-three/drei';
 import * as THREE from 'three';
 
-const RouletteWheel = ({ isSpinning, win }) => {
+const RouletteWheel = ({ isSpinning, win, outcome }) => {
     const meshRef = useRef();
 
     useFrame((state) => {
         if (meshRef.current) {
             if (isSpinning) {
                 meshRef.current.rotation.y += 0.2; // Fast spin
+            } else if (outcome !== null) {
+                // Logic to align the wheel to the outcome number
+                // For now, let's just slow down to a stop
+                meshRef.current.rotation.y += 0.01;
             } else {
                 meshRef.current.rotation.y += 0.01; // Idle rotation
             }
@@ -62,7 +66,7 @@ const WinParticles = ({ active }) => {
     );
 };
 
-const SceneContent = ({ isSpinning, win }) => {
+const SceneContent = ({ isSpinning, win, outcome }) => {
     const cameraRef = useRef();
 
     useFrame((state) => {
@@ -86,7 +90,7 @@ const SceneContent = ({ isSpinning, win }) => {
             <Stars radius={100} depth={50} count={5000} factor={4} saturation={0} fade speed={1} />
 
             <Suspense fallback={null}>
-                <RouletteWheel isSpinning={isSpinning} win={win} />
+                <RouletteWheel isSpinning={isSpinning} win={win} outcome={outcome} />
                 <WinParticles active={win} />
             </Suspense>
 
@@ -95,12 +99,12 @@ const SceneContent = ({ isSpinning, win }) => {
     );
 };
 
-const SpaceRoulette = ({ isSpinning = false, win = false }) => {
+const SpaceRoulette = ({ isSpinning = false, win = false, outcome = null }) => {
     return (
         <div className="w-full h-[500px] rounded-3xl overflow-hidden bg-black relative border border-white/5">
             <Canvas shadows dpr={[1, 2]}>
                 <color attach="background" args={['#030303']} />
-                <SceneContent isSpinning={isSpinning} win={win} />
+                <SceneContent isSpinning={isSpinning} win={win} outcome={outcome} />
             </Canvas>
 
             {/* HUD Info */}

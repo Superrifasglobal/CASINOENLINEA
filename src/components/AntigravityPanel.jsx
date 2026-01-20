@@ -3,32 +3,60 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Play, Zap, Info, Share2 } from 'lucide-react';
 import SpaceRoulette from './SpaceRoulette';
 
-const AntigravityPanel = () => {
+const AntigravityPanel = ({ user, balance, onBalanceUpdate }) => {
     const [isSpinning, setIsSpinning] = useState(false);
     const [hasWon, setHasWon] = useState(false);
 
-    const handleTestSpin = () => {
+    const [outcome, setOutcome] = useState(null);
+
+    const handleRealSpin = async () => {
+        if (!user || isSpinning || balance < 10) return;
+
         setIsSpinning(true);
         setHasWon(false);
+        setOutcome(null);
 
-        // Simulate a result after 3 seconds
-        setTimeout(() => {
-            setIsSpinning(false);
-            const win = Math.random() > 0.5;
-            setHasWon(win);
+        try {
+            const response = await fetch('/api/roulette', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    userId: user.id,
+                    betAmount: 10, // Default for demo
+                    betType: 'number',
+                    betValue: Math.floor(Math.random() * 37) // Random bet for now
+                })
+            });
 
-            if (win) {
-                // Reset win effect after 5 seconds
-                setTimeout(() => setHasWon(false), 5000);
+            const data = await response.json();
+
+            if (data.success) {
+                // Wait for the animation timing (simulate 3s)
+                setTimeout(() => {
+                    setIsSpinning(false);
+                    setOutcome(data.winningNumber);
+                    setHasWon(data.isWin);
+                    onBalanceUpdate();
+
+                    if (data.isWin) {
+                        setTimeout(() => setHasWon(false), 5000);
+                    }
+                }, 3000);
+            } else {
+                alert(data.error || 'Error en el servidor');
+                setIsSpinning(false);
             }
-        }, 3000);
+        } catch (error) {
+            console.error(error);
+            setIsSpinning(false);
+        }
     };
 
     return (
         <div className="relative group">
             {/* 3D Scene Container */}
             <div className="relative h-[500px] w-full rounded-3xl overflow-hidden glass-morphism border border-white/10 shadow-[0_20px_50px_rgba(0,0,0,0.5)] bg-black">
-                <SpaceRoulette isSpinning={isSpinning} win={hasWon} />
+                <SpaceRoulette isSpinning={isSpinning} win={hasWon} outcome={outcome} />
 
                 {/* Overlay Gradient */}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-transparent pointer-events-none" />
@@ -51,11 +79,11 @@ const AntigravityPanel = () => {
 
                     <div className="flex gap-4">
                         <button
-                            onClick={handleTestSpin}
-                            disabled={isSpinning}
-                            className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-bold transition-all duration-300 ${isSpinning
-                                    ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
-                                    : 'bg-white text-black hover:bg-neon-green hover:shadow-[0_0_30px_#00ff9d] hover:scale-105 active:scale-95'
+                            onClick={handleRealSpin}
+                            disabled={isSpinning || !user || balance < 10}
+                            className={`flex items-center gap-3 px-8 py-4 rounded-2xl font-bold transition-all duration-300 ${isSpinning || !user || balance < 10
+                                ? 'bg-gray-700 text-gray-500 cursor-not-allowed'
+                                : 'bg-white text-black hover:bg-neon-green hover:shadow-[0_0_30px_#00ff9d] hover:scale-105 active:scale-95'
                                 }`}
                         >
                             <Play fill="currentColor" size={20} />

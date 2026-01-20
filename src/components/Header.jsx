@@ -3,7 +3,7 @@ import { Bell, Search, Wallet, User as UserIcon, Menu } from 'lucide-react';
 import { motion } from 'framer-motion';
 import WalletManager from './WalletManager';
 
-const Header = ({ user, onLoginClick }) => {
+const Header = ({ user, balance, onLoginClick }) => {
     return (
         <header className="h-20 flex items-center justify-between px-4 md:px-8 z-40 relative">
             <div className="flex items-center gap-4 md:hidden">
@@ -27,6 +27,10 @@ const Header = ({ user, onLoginClick }) => {
             </div>
 
             <div className="flex items-center gap-3 md:gap-6">
+                <div className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-xl bg-neon-green/10 border border-neon-green/20 text-neon-green shadow-[0_0_15px_rgba(0,255,157,0.1)]">
+                    <Wallet size={16} />
+                    <span className="text-sm font-black tracking-tight">${balance?.toFixed(2)}</span>
+                </div>
                 <WalletManager />
 
                 <div className="flex items-center gap-2">

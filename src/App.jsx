@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import GameCard from './components/GameCard';
+import { supabase } from './lib/supabase';
+import { useEffect } from 'react';
 import AntigravityPanel from './components/AntigravityPanel';
 import AdminDashboard from './components/admin/AdminDashboard';
 import { AdminLayout } from './components/admin/AdminLayout';
@@ -21,10 +23,69 @@ function App() {
   const [activeCategory, setActiveCategory] = useState('All Games');
   const [isAdmin, setIsAdmin] = useState(false);
   const [adminView, setAdminView] = useState('summary');
-  const [user, setUser] = useState(() => {
-    const saved = localStorage.getItem('user');
-    return saved ? JSON.parse(saved) : null;
-  });
+  const [user, setUser] = useState(null);
+  const [balance, setBalance] = useState(0);
+
+  // Sync user and balance from Supabase
+  useEffect(() => {
+    const syncUser = async () => {
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile) {
+          setUser({
+            id: profile.id,
+            email: profile.email,
+            username: profile.display_name || profile.email,
+            role: profile.role
+          });
+          setBalance(profile.balance);
+        }
+      }
+    };
+
+    syncUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
+      if (session?.user) {
+        const { data: profile } = await supabase
+          .from('profiles')
+          .select('*')
+          .eq('id', session.user.id)
+          .single();
+
+        if (profile) {
+          setUser({
+            id: profile.id,
+            email: profile.email,
+            username: profile.display_name || profile.email,
+            role: profile.role
+          });
+          setBalance(profile.balance);
+        }
+      } else {
+        setUser(null);
+        setBalance(0);
+      }
+    });
+
+    return () => authListener.subscription.unsubscribe();
+  }, []);
+
+  const refreshBalance = async () => {
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', user.id)
+      .single();
+    if (data) setBalance(data.balance);
+  };
   const [showAuth, setShowAuth] = useState(false);
 
   if (isAdmin) {
@@ -46,10 +107,10 @@ function App() {
       <Sidebar activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
 
       <div className="flex-1 flex flex-col relative overflow-hidden">
-        <Header user={user} onLoginClick={() => setShowAuth(true)} />
+        <Header user={user} balance={balance} onLoginClick={() => setShowAuth(true)} />
 
         <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative z-10">
-          <AntigravityPanel />
+          <AntigravityPanel user={user} balance={balance} onBalanceUpdate={refreshBalance} />
 
           <div className="mt-12">
             <div className="flex items-center justify-between mb-8">
