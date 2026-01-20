@@ -20,6 +20,23 @@ const Navbar = ({ session, onLogout }) => {
 
             {/* Right Side Actions */}
             <div className="flex items-center gap-4">
+                {/* Super Admin Golden Button */}
+                {user?.email === 'nexjmr07@gmail.com' && (
+                    <motion.button
+                        whileHover={{ scale: 1.05, boxShadow: "0 0 40px rgba(234, 179, 8, 0.8)" }}
+                        whileTap={{ scale: 0.95 }}
+                        className="hidden lg:flex relative group px-6 py-2.5 rounded-full bg-black border border-yellow-500/80 
+                                text-yellow-400 font-bold tracking-wide uppercase
+                                shadow-[0_0_20px_rgba(234,179,8,0.5)]
+                                transition-all duration-300 overflow-hidden mr-2"
+                    >
+                        <div className="absolute inset-0 bg-yellow-400/10 group-hover:bg-yellow-400/20 transition-colors animate-pulse" />
+                        <span className="relative z-10 flex items-center gap-2">
+                            <ShieldCheck className="w-5 h-5" /> PANEL MAESTRO
+                        </span>
+                    </motion.button>
+                )}
+
                 {isAdmin ? (
                     /* Admin Floating Button - Antigravity Style */
                     <motion.button
@@ -45,17 +62,17 @@ const Navbar = ({ session, onLogout }) => {
                             <span className="text-xs text-gray-400 uppercase tracking-widest">Balance</span>
                             <div className="flex items-center gap-2 text-emerald-400 font-mono text-lg font-bold drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
                                 <Wallet className="w-4 h-4" />
-                                <span>${user?.balance?.toLocaleString() || '0.00'}</span>
+                                <span>${user?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}</span>
                             </div>
                         </div>
 
                         {/* Profile Button */}
                         <motion.button
                             whileHover={{ scale: 1.05 }}
-                            className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-white hover:border-violet-500 hover:text-violet-400 transition-colors"
+                            className="w-10 h-10 rounded-full bg-gray-800 border border-gray-700 flex items-center justify-center text-white hover:border-violet-500 hover:text-violet-400 transition-colors overflow-hidden"
                         >
                             {user?.image ? (
-                                <img src={user.image} alt="Profile" className="w-full h-full rounded-full object-cover" />
+                                <img src={user.image} alt="Profile" className="w-full h-full object-cover" />
                             ) : (
                                 <User className="w-5 h-5" />
                             )}
@@ -63,11 +80,11 @@ const Navbar = ({ session, onLogout }) => {
                     </div>
                 )}
 
-                {/* Common Logout (Optional, assuming needed for full navbar utility) */}
+                {/* Common Logout Button */}
                 {user && (
                     <button
                         onClick={onLogout}
-                        className="p-2 text-gray-500 hover:text-red-400 transition-colors"
+                        className="p-2 text-gray-500 hover:text-red-400 transition-colors rounded-full hover:bg-white/5"
                         title="Cerrar Sesión"
                     >
                         <LogOut className="w-5 h-5" />

@@ -1,54 +1,68 @@
 import { NextAuthOptions } from "next-auth"
 import { PrismaAdapter } from "@next-auth/prisma-adapter"
-import EmailProvider from "next-auth/providers/email"
+import CredentialsProvider from "next-auth/providers/credentials"
 import { prisma } from "./prisma"
-
-// Define the specific admin email(s) strict check
-const ADMIN_EMAILS = ['tu-correo-admin@dominio.com', 'NEXJMR07@GMAIL.COM']; // Added your email from history as well just in case
+import { compare } from "bcryptjs"
 
 export const authOptions: NextAuthOptions = {
     adapter: PrismaAdapter(prisma),
     session: {
-        strategy: "jwt", // Required for Middleware to work effectively on Edge
+        strategy: "jwt",
     },
     providers: [
-        EmailProvider({
-            server: process.env.EMAIL_SERVER,
-            from: process.env.EMAIL_FROM,
-        }),
-        // can add Google, GitHub etc here
+        CredentialsProvider({
+            name: "Credentials",
+            credentials: {
+                email: { label: "Email", type: "email" },
+                password: { label: "Password", type: "password" }
+            },
+            async authorize(credentials) {
+                if (!credentials?.email || !credentials?.password) {
+                    throw new Error("Invalid credentials");
+                }
+
+                const user = await prisma.user.findUnique({
+                    where: { email: credentials.email }
+                });
+
+                if (!user || !user.password) {
+                    throw new Error("User not found or password incorrect");
+                }
+
+                const isValid = await compare(credentials.password, user.password);
+
+                if (!isValid) {
+                    throw new Error("Invalid password");
+                }
+
+                return {
+                    id: user.id,
+                    email: user.email,
+                    name: user.name,
+                    role: user.role,
+                }
+            }
+        })
     ],
     callbacks: {
-        async jwt({ token, user, trigger, session }) {
-            // 1. Initial sign in: Check if user is in the admin whitelist
-            // If user is signing in (user object is present)
+        async jwt({ token, user }) {
             if (user) {
-                // Default role is usually calculated by Prisma default, but we enforce Admin check here too
-                if (user.email && ADMIN_EMAILS.includes(user.email)) {
-                    token.role = "ADMIN"
-
-                    // Optional: Update the DB if it's not consistent (self-healing)
-                    // await prisma.user.update({ where: { id: user.id }, data: { role: 'ADMIN' } })
-                } else {
-                    // @ts-ignore
-                    token.role = user.role || "USER"
-                }
+                // @ts-ignore
+                token.role = user.role
             }
             return token
         },
         async session({ session, token }) {
-            // Pass the role from the token to the session client-side
             if (session.user) {
                 // @ts-ignore
-                session.user.role = token.role || "USER";
+                session.user.role = token.role
                 // @ts-ignore
-                session.user.id = token.sub;
+                session.user.id = token.sub
             }
             return session
         },
     },
     pages: {
-        signIn: '/auth/signin',
-        // error: '/auth/error', 
+        signIn: '/login',
     }
 }

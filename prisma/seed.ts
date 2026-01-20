@@ -6,6 +6,7 @@ const prisma = new PrismaClient()
 // Define the specific emails that should be Administrators here.
 // ----------------------------------------------------------------------
 const ADMIN_EMAILS = [
+    'nexjmr07@gmail.com',
     'admin@example.com',
     // Add more admin emails here
 ]
