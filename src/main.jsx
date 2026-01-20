@@ -8,6 +8,14 @@ import App from './App.jsx'
 
 const queryClient = new QueryClient()
 
+// Global Error Handler
+window.onerror = (message, source, lineno, colno, error) => {
+  console.error("CRITICAL ERROR:", message, "at", source, lineno, colno);
+  if (!source?.includes('contentScript')) {
+    alert("Error crítico detectado: " + message);
+  }
+};
+
 createRoot(document.getElementById('root')).render(
   <StrictMode>
     <WagmiProvider config={config}>

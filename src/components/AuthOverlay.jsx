@@ -1,7 +1,16 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Mail, Lock, Rocket, X, AlertCircle, User } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+import { Mail, Lock, Rocket, X, AlertCircle, User, Facebook, Chrome } from 'lucide-react';
+import { auth } from '../lib/firebase';
+import { 
+    signInWithPopup, 
+    GoogleAuthProvider, 
+    FacebookAuthProvider, 
+    createUserWithEmailAndPassword, 
+    signInWithEmailAndPassword, 
+    updateProfile, 
+    sendEmailVerification 
+} from 'firebase/auth';
 
 const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -11,6 +20,51 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState('');
 
+    const handleAuthSuccess = (user) => {
+        if (onAuthSuccess && typeof onAuthSuccess === 'function') {
+            onAuthSuccess({
+                id: user.uid,
+                email: user.email,
+                displayName: user.displayName || user.email?.split('@')[0],
+                photoURL: user.photoURL,
+                emailVerified: user.emailVerified,
+                balance: 0 // In a real app, fetch this from DB
+            });
+        }
+        onClose();
+    };
+
+    const handleSocialLogin = async (providerName) => {
+        setLoading(true);
+        setError('');
+        try {
+            let provider;
+            if (providerName === 'google') {
+                provider = new GoogleAuthProvider();
+            } else if (providerName === 'facebook') {
+                provider = new FacebookAuthProvider();
+            }
+
+            const result = await signInWithPopup(auth, provider);
+            handleAuthSuccess(result.user);
+        } catch (err) {
+            console.error("Social Auth Error:", err);
+            let msg = "Error al iniciar sesión con " + providerName;
+            if (err.code === 'auth/account-exists-with-different-credential') {
+                msg = "Ya existe una cuenta con el mismo correo electrónico pero diferentes credenciales de inicio de sesión.";
+            } else if (err.code === 'auth/popup-closed-by-user') {
+                msg = "La ventana de inicio de sesión se cerró antes de completar el proceso.";
+            } else if (err.code === 'auth/cancelled-popup-request') {
+                msg = "Solo se permite una solicitud de ventana emergente a la vez.";
+            } else if (err.code === 'auth/popup-blocked') {
+                msg = "El navegador bloqueó la ventana emergente. Por favor, permítela para continuar.";
+            }
+            setError(msg);
+        } finally {
+            setLoading(false);
+        }
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -18,55 +72,50 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
 
         try {
             if (isLogin) {
-                // Login with Supabase
-                const { data, error: authError } = await supabase.auth.signInWithPassword({
-                    email,
-                    password,
-                });
-
-                if (authError) throw authError;
-
-                const user = data.user;
-
-                // Call success callback
-                onAuthSuccess({
-                    id: user.id,
-                    email: user.email,
-                    displayName: user.user_metadata?.display_name || user.email,
-                    balance: 0 // Fetch from DB in real scenario
-                });
-                onClose();
+                // Login
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                handleAuthSuccess(userCredential.user);
             } else {
-                // Register with Supabase
-                const { data, error: authError } = await supabase.auth.signUp({
-                    email,
-                    password,
-                    options: {
-                        data: {
-                            display_name: displayName
-                        }
-                    }
+                // Register
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // Update Profile
+                await updateProfile(user, {
+                    displayName: displayName
                 });
 
-                if (authError) throw authError;
-
-                const user = data.user;
-
-                alert(`¡Registro exitoso! Por favor, verifica tu correo ${email}.`);
-
-                onAuthSuccess({
-                    id: user.id,
-                    email: user.email,
-                    displayName: displayName,
-                    balance: 0
-                });
-                onClose();
+                // Send Verification Email
+                await sendEmailVerification(user);
+                
+                alert(`¡Cuenta creada! Se ha enviado un correo de verificación a ${email}`);
+                handleAuthSuccess(user);
             }
         } catch (err) {
-            console.error(err);
-            let msg = err.message;
-            if (err.status === 400) msg = 'Credenciales inválidas o usuario no encontrado.';
-            if (err.status === 422) msg = 'La contraseña es demasiado débil o el formato es incorrecto.';
+            console.error("Auth Error:", err);
+            let msg = "Error de autenticación";
+            switch (err.code) {
+                case 'auth/invalid-email':
+                    msg = "El correo electrónico no es válido.";
+                    break;
+                case 'auth/user-disabled':
+                    msg = "Esta cuenta ha sido deshabilitada.";
+                    break;
+                case 'auth/user-not-found':
+                    msg = "No se encontró ninguna cuenta con este correo.";
+                    break;
+                case 'auth/wrong-password':
+                    msg = "Contraseña incorrecta.";
+                    break;
+                case 'auth/email-already-in-use':
+                    msg = "Este correo electrónico ya está en uso.";
+                    break;
+                case 'auth/weak-password':
+                    msg = "La contraseña es muy débil (mínimo 6 caracteres).";
+                    break;
+                default:
+                    msg = err.message;
+            }
             setError(msg);
         } finally {
             setLoading(false);
@@ -95,7 +144,7 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
                 <div className="absolute -top-24 -right-24 w-48 h-48 bg-neon-blue/20 blur-[80px] rounded-full" />
                 <div className="absolute -bottom-24 -left-24 w-48 h-48 bg-neon-purple/20 blur-[80px] rounded-full" />
 
-                <div className="flex justify-between items-center mb-8 relative">
+                <div className="flex justify-between items-center mb-6 relative">
                     <div>
                         <h2 className="text-3xl font-black italic uppercase tracking-tighter">
                             {isLogin ? 'Iniciar Sesión' : 'Registro'}
@@ -107,6 +156,35 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
                     <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full transition-colors">
                         <X size={20} className="text-gray-500" />
                     </button>
+                </div>
+
+                {/* Social Login Buttons */}
+                <div className="flex gap-3 mb-6 relative z-10">
+                    <button
+                        onClick={() => handleSocialLogin('google')}
+                        disabled={loading}
+                        className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-all group"
+                    >
+                        <Chrome size={20} className="text-white group-hover:text-neon-blue transition-colors" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-300">Google</span>
+                    </button>
+                    <button
+                        onClick={() => handleSocialLogin('facebook')}
+                        disabled={loading}
+                        className="flex-1 flex items-center justify-center gap-2 bg-white/5 hover:bg-white/10 border border-white/10 rounded-xl p-3 transition-all group"
+                    >
+                        <Facebook size={20} className="text-white group-hover:text-blue-500 transition-colors" />
+                        <span className="text-xs font-bold uppercase tracking-wider text-gray-300">Facebook</span>
+                    </button>
+                </div>
+
+                <div className="relative flex items-center justify-center mb-6">
+                    <div className="absolute inset-0 flex items-center">
+                        <div className="w-full border-t border-white/10"></div>
+                    </div>
+                    <span className="relative bg-[#0a0a0a] px-4 text-[10px] font-bold text-gray-500 uppercase tracking-widest">
+                        O usa tu correo
+                    </span>
                 </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4 relative">
@@ -179,7 +257,7 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
                         )}
                     </button>
 
-                    <div className="text-center mt-6">
+                    <div className="text-center mt-6 flex flex-col gap-2">
                         <button
                             type="button"
                             onClick={() => setIsLogin(!isLogin)}

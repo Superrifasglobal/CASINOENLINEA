@@ -1,14 +1,10 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
 import GameCard from './components/GameCard';
-import { supabase } from './lib/supabase';
-import { useEffect } from 'react';
 import AntigravityPanel from './components/AntigravityPanel';
 import AdminDashboard from './components/admin/AdminDashboard';
-import { AdminLayout } from './components/admin/AdminLayout';
-import { AdminStats, AdminPerformanceChart } from './components/admin/AdminStats';
-import { AdminTable } from './components/admin/AdminTable';
+import { supabase } from './lib/supabase';
 import AuthOverlay from './components/AuthOverlay';
 
 // Import game card images or use placeholders
@@ -22,72 +18,84 @@ const demoGames = [
 function App() {
   const [activeCategory, setActiveCategory] = useState('All Games');
   const [isAdmin, setIsAdmin] = useState(false);
-  const [adminView, setAdminView] = useState('summary');
   const [user, setUser] = useState(null);
   const [balance, setBalance] = useState(0);
+  const [showAuth, setShowAuth] = useState(false);
 
-  // Sync user and balance from Supabase
+  // Sync user from Supabase
   useEffect(() => {
-    const syncUser = async () => {
-      const { data } = await supabase.auth.getSession();
-      const session = data?.session;
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
+    console.log("App: Iniciando sincronización de sesión...");
 
-        if (profile) {
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            username: profile.display_name || profile.email,
-            role: profile.role
-          });
-          setBalance(profile.balance);
-        }
+    // 1. Get initial session
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      console.log("App: Sesión inicial recuperada:", session ? "USUARIO PRESENTE" : "NULA");
+      if (session) {
+        handleUserAuthenticated(session.user);
       }
-    };
+    }).catch(err => {
+      console.error("App: Fallo al obtener sesión inicial:", err);
+    });
 
-    syncUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(async (event, session) => {
-      if (session?.user) {
-        const { data: profile } = await supabase
-          .from('profiles')
-          .select('*')
-          .eq('id', session.user.id)
-          .single();
-
-        if (profile) {
-          setUser({
-            id: profile.id,
-            email: profile.email,
-            username: profile.display_name || profile.email,
-            role: profile.role
-          });
-          setBalance(profile.balance);
-        }
+    // 2. Listen for auth changes
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      console.log("App: Evento de Auth detectado:", _event, session ? "SESIÓN ACTIVA" : "SIN SESIÓN");
+      if (session) {
+        handleUserAuthenticated(session.user);
       } else {
         setUser(null);
         setBalance(0);
+        setIsAdmin(false);
       }
     });
 
-    return () => authListener.subscription.unsubscribe();
+    return () => {
+      console.log("App: Limpiando listener de suscripción");
+      subscription.unsubscribe();
+    };
   }, []);
 
-  const refreshBalance = async () => {
-    if (!user) return;
-    const { data } = await supabase
-      .from('profiles')
-      .select('balance')
-      .eq('id', user.id)
-      .single();
-    if (data) setBalance(data.balance);
+  const handleUserAuthenticated = (supabaseUser) => {
+    try {
+      if (!supabaseUser) return;
+
+      console.log("Procesando usuario autenticado:", supabaseUser.email);
+
+      // Logic for identifying admin
+      const isAdminUser = supabaseUser.email === 'nexjmr07@gmail.com' || supabaseUser.user_metadata?.role === 'admin';
+
+      const email = supabaseUser.email || "";
+      const username = supabaseUser.user_metadata?.display_name || email.split('@')[0] || "Usuario";
+
+      setUser({
+        id: supabaseUser.id,
+        email: email,
+        username: username,
+        role: isAdminUser ? 'admin' : 'user',
+      });
+
+      // Simulated balance
+      setBalance(1000.0);
+    } catch (error) {
+      console.error("Error crítico en handleUserAuthenticated:", error);
+      alert("Error al cargar perfil de usuario. Revisa la consola.");
+    }
   };
-  const [showAuth, setShowAuth] = useState(false);
+
+  const handleLogout = async () => {
+    try {
+      await supabase.auth.signOut();
+      setUser(null);
+      setBalance(0);
+      setIsAdmin(false);
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
+
+  const refreshBalance = async () => {
+    // Implementar llamada real a /api/getBalance con el token de Supabase
+    console.log('Refreshing balance logic to be implemented with Supabase session');
+  };
 
   if (isAdmin) {
     return (
@@ -140,7 +148,6 @@ function App() {
       <AuthOverlay
         isOpen={showAuth}
         onClose={() => setShowAuth(false)}
-        onAuthSuccess={setUser}
       />
 
       {/* Ambient background gradients */}

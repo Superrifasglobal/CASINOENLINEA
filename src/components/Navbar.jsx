@@ -62,7 +62,7 @@ const Navbar = ({ session, onLogout }) => {
                             <span className="text-xs text-gray-400 uppercase tracking-widest">Balance</span>
                             <div className="flex items-center gap-2 text-emerald-400 font-mono text-lg font-bold drop-shadow-[0_0_8px_rgba(52,211,153,0.5)]">
                                 <Wallet className="w-4 h-4" />
-                                <span>${user?.balance?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}</span>
+                                <span>{user?.balance !== undefined ? `$${user.balance.toLocaleString(undefined, { minimumFractionDigits: 2 })}` : '$0.00'}</span>
                             </div>
                         </div>
 

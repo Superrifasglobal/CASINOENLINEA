@@ -25,14 +25,45 @@ const AuthOverlay = ({ isOpen, onClose }) => {
         setIsLoading(true);
         setError('');
         try {
-            await signInWithEmailAndPassword(auth, loginData.email, loginData.password);
-            // Successful login will trigger onAuthStateChanged in parent or redirect
+            const userCredential = await signInWithEmailAndPassword(auth, loginData.email, loginData.password);
+            const user = userCredential.user;
+
+            if (!user.emailVerified) {
+                setError(
+                    <div className="flex flex-col gap-2 items-center">
+                        <span>Tu correo electrónico no ha sido verificado.</span>
+                        <button
+                            type="button"
+                            onClick={() => handleResendVerification(user)}
+                            className="bg-white/10 hover:bg-white/20 px-3 py-1 rounded-lg text-[10px] transition-all"
+                        >
+                            Re-enviar Correo de Activación
+                        </button>
+                    </div>
+                );
+                return;
+            }
+
+            // Successful login
             window.location.href = '/lobby';
         } catch (err) {
             console.error(err);
-            setError("Error: " + err.message.replace('Firebase: ', ''));
+            let msg = err.message;
+            if (err.code === 'auth/user-not-found') msg = 'Usuario no encontrado.';
+            if (err.code === 'auth/wrong-password') msg = 'Contraseña incorrecta.';
+            if (err.message.includes('Firebase:')) msg = err.message.replace('Firebase: ', '');
+            setError(msg);
         } finally {
             setIsLoading(false);
+        }
+    };
+
+    const handleResendVerification = async (user) => {
+        try {
+            await sendEmailVerification(user);
+            alert("Nuevo correo de verificación enviado. Por favor revisa tu bandeja de entrada.");
+        } catch (err) {
+            setError("Error al re-enviar: " + err.message);
         }
     };
 
@@ -42,12 +73,10 @@ const AuthOverlay = ({ isOpen, onClose }) => {
         setError('');
 
         if (!registerData.email || !registerData.name || !registerData.password) {
-            alert("Por favor, rellena todos los campos.");
+            setError("Por favor, rellena todos los campos.");
             setIsLoading(false);
             return;
         }
-
-        console.log("Registrando a:", registerData.email);
 
         try {
             // 1. Create User
@@ -62,17 +91,20 @@ const AuthOverlay = ({ isOpen, onClose }) => {
             // 3. Send Verification Email
             await sendEmailVerification(user);
 
-            // Success Alert
-            alert(`¡Registro exitoso para ${registerData.name}! Hemos enviado un correo de verificación a ${registerData.email}. Por favor revísalo.`);
+            // Success Feedback
+            alert(`¡Registro iniciado! Se ha enviado un correo de verificación a ${registerData.email}. Por favor, confirma tu cuenta en tu bandeja de entrada antes de continuar.`);
 
-            // Redirect or close
-            window.location.href = '/lobby';
+            // Stay on login and inform
+            setIsLogin(true);
+            setLoginData({ email: registerData.email, password: '' });
+            setError('Cuenta creada. Por favor verifica tu email para activar.');
 
         } catch (err) {
             console.error(err);
             let msg = err.message;
             if (err.code === 'auth/email-already-in-use') msg = 'Este correo ya está registrado.';
             if (err.code === 'auth/weak-password') msg = 'La contraseña debe tener al menos 6 caracteres.';
+            if (err.message.includes('Firebase:')) msg = err.message.replace('Firebase: ', '');
             setError(msg);
         } finally {
             setIsLoading(false);

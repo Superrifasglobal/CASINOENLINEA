@@ -1,22 +1,24 @@
 @import "tailwindcss";
 
 @theme {
-  --color-background: #0a0a0a;
-  --color-surface: #121212;
-  --color-surfaceHighlight: #1e1e1e;
+  --color-background: #030303;
+  --color-surface: #0a0a0a;
+  --color-surfaceHighlight: #111111;
 
   --color-neon-green: #00ff9d;
   --color-neon-blue: #00f3ff;
   --color-neon-purple: #b026ff;
   --color-neon-pink: #ff007f;
+  --color-luxury-gold: #ffcc33;
+  --color-deep-space: #050510;
 
-  /* Using standard CSS variables for colors is fine in @theme */
-  --color-glass-low: rgba(255, 255, 255, 0.05);
-  --color-glass-medium: rgba(255, 255, 255, 0.1);
-  --color-glass-high: rgba(255, 255, 255, 0.2);
+  --color-glass-low: rgba(255, 255, 255, 0.03);
+  --color-glass-medium: rgba(255, 255, 255, 0.08);
+  --color-glass-high: rgba(255, 255, 255, 0.15);
 
   --animate-float: float 6s ease-in-out infinite;
   --animate-pulse-slow: pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+  --animate-aurora: aurora 20s linear infinite;
 
   @keyframes float {
 
@@ -29,11 +31,21 @@
       transform: translateY(-20px);
     }
   }
+
+  @keyframes aurora {
+    from {
+      background-position: 0% 50%;
+    }
+
+    to {
+      background-position: 100% 50%;
+    }
+  }
 }
 
 @layer base {
   body {
-    @apply bg-background text-white font-sans antialiased overflow-hidden;
+    @apply bg-background text-white font-sans antialiased overflow-hidden selection:bg-neon-blue/30;
   }
 
   /* Custom Scrollbar */
@@ -47,30 +59,37 @@
   }
 
   ::-webkit-scrollbar-thumb {
-    @apply bg-white/10 rounded-full;
-  }
-
-  ::-webkit-scrollbar-thumb:hover {
-    @apply bg-white/20;
+    @apply bg-white/5 rounded-full hover:bg-white/10 transition-colors;
   }
 }
 
 @layer components {
   .glass-panel {
-    @apply bg-glass-low backdrop-blur-md border border-white/5 shadow-lg;
+    @apply bg-glass-low backdrop-blur-xl border border-white/5 shadow-[0_8px_32px_rgba(0, 0, 0, 0.8)];
+  }
+
+  .premium-card {
+    @apply glass-panel rounded-[2.5rem] p-8 hover:border-white/10 transition-all duration-500 hover:shadow-2xl;
+  }
+
+  .aurora-glow {
+    background: linear-gradient(45deg,
+        rgba(176, 38, 255, 0.1),
+        rgba(0, 243, 255, 0.1),
+        rgba(0, 255, 157, 0.1));
+    background-size: 200% 200%;
+    @apply animate-aurora;
   }
 
   .glass-button {
-    /* Replaced rgba with hex alpha #00ff9d1a */
-    @apply px-4 py-2 rounded-lg bg-white/5 hover:bg-white/10 transition-all duration-300 backdrop-blur-sm border border-white/5 hover:border-neon-green/30 hover:shadow-[0_0_15px_#00ff9d1a];
+    @apply px-6 py-3 rounded-2xl bg-white/5 hover:bg-white/10 transition-all duration-300 backdrop-blur-md border border-white/5 hover:border-white/20 active:scale-95 flex items-center justify-center gap-2;
   }
 
   .nav-item {
-    @apply flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-300 text-gray-400 hover:text-white hover:bg-white/5;
+    @apply flex items-center gap-3 px-6 py-4 rounded-2xl transition-all duration-500 text-gray-500 hover:text-white hover:bg-white/[0.03] group;
   }
 
   .nav-item.active {
-    /* Replaced rgba with hex alpha #00ff9d1a */
-    @apply bg-neon-green/10 text-neon-green border border-neon-green/20 shadow-[0_0_10px_#00ff9d1a];
+    @apply bg-white/5 text-white border border-white/10 shadow-lg;
   }
 }
