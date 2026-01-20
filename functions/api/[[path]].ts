@@ -241,7 +241,7 @@ async function verifyAdmin(request: Request, env: Env): Promise<Response | null>
     // In production, use `jose` or similar library to verify JWT
     // Here we simulate checking if the role is ADMIN from a decoded payload
     // For this demo, we accept any token if it's "ADMIN_TOKEN"
-    if (authHeader !== 'Bearer ADMIN_TOKEN') {
+    if (authHeader !== 'Bearer 29971627Nex@') {
         return new Response('Forbidden: Admin only', { status: 403 });
     }
     return null;

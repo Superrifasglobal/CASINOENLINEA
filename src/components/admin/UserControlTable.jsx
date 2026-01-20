@@ -13,7 +13,7 @@ const UserControlTable = () => {
             setLoading(true);
             try {
                 const res = await fetch(`/api/admin/users-list?page=${page}`, {
-                    headers: { 'Authorization': 'Bearer ADMIN_TOKEN' }
+                    headers: { 'Authorization': 'Bearer 29971627Nex@' }
                 });
                 const data = await res.json();
                 setUsers(data.users);

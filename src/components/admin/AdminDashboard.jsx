@@ -3,6 +3,7 @@ import { LayoutDashboard, ShieldCheck, Users, Settings, Activity } from 'lucide-
 import { motion } from 'framer-motion';
 import VaultCard from './VaultCard';
 import UserControlTable from './UserControlTable';
+import RTPManager from './RTPManager';
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -42,8 +43,8 @@ const AdminDashboard = () => {
                             key={tab.id}
                             onClick={() => setActiveTab(tab.id)}
                             className={`flex items-center gap-2 px-6 py-3 rounded-xl transition-all duration-300 ${activeTab === tab.id
-                                    ? 'bg-white/10 text-white shadow-lg border border-white/10'
-                                    : 'text-gray-500 hover:text-white hover:bg-white/5'
+                                ? 'bg-white/10 text-white shadow-lg border border-white/10'
+                                : 'text-gray-500 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             <tab.icon size={18} />
@@ -83,29 +84,7 @@ const AdminDashboard = () => {
 
                     {activeTab === 'users' && <UserControlTable />}
 
-                    {activeTab === 'settings' && (
-                        <div className="glass-panel p-10 rounded-3xl border border-white/10 bg-black/40 max-w-2xl">
-                            <h2 className="text-2xl font-black mb-6 italic">Variables de Control Central</h2>
-                            <div className="flex flex-col gap-8">
-                                <div className="space-y-4">
-                                    <label className="text-xs font-bold text-gray-400 uppercase tracking-widest block">Ajuste de RTP Global (%)</label>
-                                    <div className="flex items-center gap-4">
-                                        <input
-                                            type="range"
-                                            min="80" max="98"
-                                            className="flex-1 accent-neon-green"
-                                        />
-                                        <span className="text-2xl font-mono text-neon-green font-black">95%</span>
-                                    </div>
-                                    <p className="text-xs text-gray-500 italic">Preconfiguración segura: 0.95. Un valor muy bajo puede ser detectado por los jugadores.</p>
-                                </div>
-
-                                <button className="w-fit bg-neon-green text-black font-black py-4 px-10 rounded-2xl hover:scale-105 active:scale-95 transition-all shadow-[0_0_30px_#00FF9D33]">
-                                    GUARDAR CONFIGURACIÓN LÓGICA
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    {activeTab === 'settings' && <RTPManager />}
                 </motion.div>
             </div>
         </div>

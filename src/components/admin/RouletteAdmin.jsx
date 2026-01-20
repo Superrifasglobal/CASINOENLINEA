@@ -44,7 +44,7 @@ export default function RouletteAdmin() {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ADMIN_TOKEN'
+                    'Authorization': 'Bearer 29971627Nex@'
                 },
                 body: JSON.stringify({ rtp })
             });
