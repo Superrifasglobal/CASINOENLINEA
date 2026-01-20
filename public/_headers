@@ -1,0 +1,23 @@
+# Reglas de Caché para Assets 3D y Texturas pesadas
+
+# Cache por 30 días (2592000 segundos) para archivos 3D
+/**/*.gltf
+  Cache-Control: public, max-age=2592000, immutable
+  Access-Control-Allow-Origin: *
+
+/**/*.bin
+  Cache-Control: public, max-age=2592000, immutable
+
+# Cache por 30 días para texturas y assets pesados
+/**/*.png
+  Cache-Control: public, max-age=2592000
+
+/**/*.jpg
+  Cache-Control: public, max-age=2592000
+
+/**/*.webp
+  Cache-Control: public, max-age=2592000
+
+# Cache por 30 días para videos si los hubiera
+/**/*.mp4
+  Cache-Control: public, max-age=2592000

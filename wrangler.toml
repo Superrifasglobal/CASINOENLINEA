@@ -1,0 +1,44 @@
+# Antigravity Casino Deployment Configuration (Cloudflare Pages)
+
+name = "antigravity-casino"
+pages_build_output_dir = "dist"
+compatibility_date = "2024-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+# 1. Base Virtual Machine placement
+# Mueve la ejecución de Functions cerca de la DB para menor latencia en apuestas.
+[smart_placement]
+enabled = true
+
+# 2. Database Binding (Cloudflare D1)
+# Permite acceder a la DB desde functions/api/ vía env.DB
+[[d1_databases]]
+binding = "DB"
+database_name = "casino-db"
+database_id = "your-d1-id-here" # Reemplazar con el ID real de D1
+
+# 3. Session Storage (Cloudflare KV)
+# Para gestionar sesiones de usuario de alta velocidad.
+[[kv_namespaces]]
+binding = "SESSIONS"
+id = "your-kv-id-here" # Reemplazar con el ID real de KV
+
+# 4. Durable Objects (Live Presence)
+[[durable_objects.bindings]]
+name = "PRESENCE"
+class_name = "PresenceDO"
+
+[[migrations]]
+tag = "v1" # Example migration tag
+new_classes = ["PresenceDO"]
+
+# 4. Observability & Monitoring
+[observability]
+enabled = true
+
+# 5. Asset Caching (Headers se manejan en public/_headers)
+# Los archivos en /dist se sirven automáticamente.
+
+# 6. Cron Triggers (Para Reconciliación de Saldos cada 10 min)
+[triggers]
+crons = ["*/10 * * * *"]

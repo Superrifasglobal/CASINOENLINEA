@@ -1,0 +1,9 @@
+name = "gravity-wallet-backend"
+main = "src/index.ts"
+compatibility_date = "2024-01-20"
+
+[[d1_databases]]
+binding = "DB"
+database_name = "gravity_db"
+database_id = "YOUR_D1_DATABASE_ID" # Placeholder
+migrations_dir = "src/db"
