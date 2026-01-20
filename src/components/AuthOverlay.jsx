@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Mail, Lock, Rocket, X, AlertCircle, User } from 'lucide-react';
-import { auth } from '../lib/firebase';
-import { signInWithEmailAndPassword, createUserWithEmailAndPassword, updateProfile, sendEmailVerification } from 'firebase/auth';
+import { supabase } from '../lib/supabase';
 
 const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
     const [isLogin, setIsLogin] = useState(true);
@@ -19,33 +18,44 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
 
         try {
             if (isLogin) {
-                // Login with Firebase
-                const userCredential = await signInWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
+                // Login with Supabase
+                const { data, error: authError } = await supabase.auth.signInWithPassword({
+                    email,
+                    password,
+                });
+
+                if (authError) throw authError;
+
+                const user = data.user;
 
                 // Call success callback
                 onAuthSuccess({
-                    id: user.uid,
+                    id: user.id,
                     email: user.email,
-                    displayName: user.displayName,
-                    balance: 0 // You'd fetch this from your backend
+                    displayName: user.user_metadata?.display_name || user.email,
+                    balance: 0 // Fetch from DB in real scenario
                 });
                 onClose();
             } else {
-                // Register with Firebase
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-                const user = userCredential.user;
+                // Register with Supabase
+                const { data, error: authError } = await supabase.auth.signUp({
+                    email,
+                    password,
+                    options: {
+                        data: {
+                            display_name: displayName
+                        }
+                    }
+                });
 
-                // Update profile with display name
-                await updateProfile(user, { displayName });
+                if (authError) throw authError;
 
-                // Send verification email
-                await sendEmailVerification(user);
+                const user = data.user;
 
-                alert(`¡Registro exitoso para ${displayName}! Hemos enviado un correo de verificación a ${email}.`);
+                alert(`¡Registro exitoso! Por favor, verifica tu correo ${email}.`);
 
                 onAuthSuccess({
-                    id: user.uid,
+                    id: user.id,
                     email: user.email,
                     displayName: displayName,
                     balance: 0
@@ -54,11 +64,9 @@ const AuthOverlay = ({ isOpen, onClose, onAuthSuccess }) => {
             }
         } catch (err) {
             console.error(err);
-            let msg = err.message.replace('Firebase: ', '');
-            if (err.code === 'auth/email-already-in-use') msg = 'Este correo ya está registrado.';
-            if (err.code === 'auth/weak-password') msg = 'La contraseña debe tener al menos 6 caracteres.';
-            if (err.code === 'auth/invalid-credential') msg = 'Credenciales inválidas.';
-            if (err.code === 'auth/user-not-found') msg = 'Usuario no encontrado.';
+            let msg = err.message;
+            if (err.status === 400) msg = 'Credenciales inválidas o usuario no encontrado.';
+            if (err.status === 422) msg = 'La contraseña es demasiado débil o el formato es incorrecto.';
             setError(msg);
         } finally {
             setLoading(false);
