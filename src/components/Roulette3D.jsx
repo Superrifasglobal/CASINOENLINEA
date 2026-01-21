@@ -1,45 +1,12 @@
 import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { Canvas, useFrame } from '@react-three/fiber';
-import { Physics, useSphere, useCylinder, useContactMaterial } from '@react-three/cannon';
-import { OrbitControls, PerspectiveCamera, Text, Environment, Float } from '@react-three/drei';
+import { Physics, useSphere, useCylinder } from '@react-three/cannon';
+import { OrbitControls, PerspectiveCamera, Text, Environment } from '@react-three/drei';
 import * as THREE from 'three';
 import RouletteBoard from './RouletteBoard';
 
-// European Roulette Sequence
 const ROULETTE_SEQUENCE = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
 const RED_NUMBERS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
-
-// Helper to calculate payout
-const calculatePayout = (winNum, bets) => {
-    let payout = 0;
-    const winNumStr = winNum.toString();
-
-    Object.entries(bets).forEach(([betId, amount]) => {
-        // Individual numbers
-        if (betId === winNumStr) {
-            payout += amount * 36;
-        }
-        // Dozens
-        else if (betId === 'dozen_1' && winNum >= 1 && winNum <= 12) payout += amount * 3;
-        else if (betId === 'dozen_2' && winNum >= 13 && winNum <= 24) payout += amount * 3;
-        else if (betId === 'dozen_3' && winNum >= 25 && winNum <= 36) payout += amount * 3;
-        // Columns
-        else if (betId === 'column_1' && winNum % 3 === 1) payout += amount * 3;
-        else if (betId === 'column_2' && winNum % 3 === 2) payout += amount * 3;
-        else if (betId === 'column_3' && winNum % 3 === 0 && winNum !== 0) payout += amount * 3;
-        // Even/Odd
-        else if (betId === 'even' && winNum !== 0 && winNum % 2 === 0) payout += amount * 2;
-        else if (betId === 'odd' && winNum !== 0 && winNum % 2 !== 0) payout += amount * 2;
-        // Colors
-        else if (betId === 'red' && RED_NUMBERS.includes(winNum)) payout += amount * 2;
-        else if (betId === 'black' && winNum !== 0 && !RED_NUMBERS.includes(winNum)) payout += amount * 2;
-        // Low/High
-        else if (betId === 'low' && winNum >= 1 && winNum <= 18) payout += amount * 2;
-        else if (betId === 'high' && winNum >= 19 && winNum <= 36) payout += amount * 2;
-    });
-
-    return payout;
-};
 
 const Wheel = ({ spinning, angularVelocity }) => {
     const [ref, api] = useCylinder(() => ({
@@ -49,7 +16,7 @@ const Wheel = ({ spinning, angularVelocity }) => {
         position: [0, 0, 0],
     }));
 
-    useFrame((state, delta) => {
+    useFrame(() => {
         if (spinning) {
             api.angularVelocity.set(0, THREE.MathUtils.degToRad(angularVelocity), 0);
         } else {
@@ -63,31 +30,21 @@ const Wheel = ({ spinning, angularVelocity }) => {
                 <cylinderGeometry args={[4, 4, 0.5, 64]} />
                 <meshStandardMaterial color="#1a1a1a" metalness={0.8} roughness={0.2} />
             </mesh>
-
             {ROULETTE_SEQUENCE.map((num, i) => {
                 const angle = (i / 37) * Math.PI * 2;
                 const x = Math.sin(angle) * 3.5;
                 const z = Math.cos(angle) * 3.5;
                 const color = num === 0 ? "#00ff00" : (RED_NUMBERS.includes(num) ? "#ff0000" : "#000000");
-
                 return (
                     <group key={i} position={[x, 0.26, z]} rotation={[0, angle, 0]}>
                         <mesh receiveShadow>
                             <boxGeometry args={[0.6, 0.05, 0.8]} />
                             <meshStandardMaterial color={color} />
                         </mesh>
-                        <Text
-                            position={[0, 0.1, 0]}
-                            rotation={[-Math.PI / 2, 0, 0]}
-                            fontSize={0.2}
-                            color="white"
-                        >
-                            {num}
-                        </Text>
+                        <Text position={[0, 0.1, 0]} rotation={[-Math.PI / 2, 0, 0]} fontSize={0.2} color="white">{num}</Text>
                     </group>
                 );
             })}
-
             <mesh position={[0, 0.3, 0]}>
                 <cylinderGeometry args={[0.5, 0.8, 0.6, 32]} />
                 <meshStandardMaterial color="#d4af37" metalness={1} roughness={0.1} />
@@ -128,9 +85,8 @@ const Roulette3D = ({ user, balance, onBalanceUpdate }) => {
     const [status, setStatus] = useState("Esperando apuestas...");
     const [currentBets, setCurrentBets] = useState({});
     const [totalBetValue, setTotalBetValue] = useState(0);
-    const [lastWin, setLastWin] = useState(null);
 
-    const handleSpin = () => {
+    const handleSpin = async () => {
         if (totalBetValue <= 0) {
             setStatus("¡Coloca una apuesta primero!");
             return;
@@ -140,21 +96,37 @@ const Roulette3D = ({ user, balance, onBalanceUpdate }) => {
             return;
         }
 
-        const randomSpeed = Math.floor(Math.random() * 1000) + 1000;
-        setAngularVelocity(randomSpeed);
+        setStatus("Iniciando partida segura...");
         setSpinning(true);
-        setLaunchRequested(prev => prev + 1);
-        setStatus("Girando...");
-        setLastWin(null);
 
-        setTimeout(() => {
+        try {
+            // Server-Side Truth: Fetch result before animation
+            const response = await fetch('/api/roulette/spin', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ userId: user?.id, bets: currentBets, totalBet: totalBetValue })
+            });
+
+            const data = await response.json();
+            if (!data.success) throw new Error(data.error);
+
+            // Start visual animation based on backend data
+            const randomSpeed = Math.floor(Math.random() * 1000) + 1000;
+            setAngularVelocity(randomSpeed);
+            setLaunchRequested(prev => prev + 1);
+            setStatus("Girando...");
+
+            setTimeout(() => {
+                setSpinning(false);
+                setStatus(`Resultado: ${data.winningNumber} ${data.payout > 0 ? `| GANASTE: $${data.payout}` : '| Sigue intentando'}`);
+                if (onBalanceUpdate) onBalanceUpdate(); // Sync balance with DB
+            }, 5000);
+
+        } catch (error) {
+            console.error('Spin Error:', error);
+            setStatus(`Error: ${error.message}`);
             setSpinning(false);
-            const winNum = ROULETTE_SEQUENCE[Math.floor(Math.random() * 37)];
-            const payout = calculatePayout(winNum, currentBets);
-
-            setLastWin({ number: winNum, payout: payout });
-            setStatus(`Resultado: ${winNum} ${payout > 0 ? `| GANASTE: $${payout}` : '| Sigue intentando'}`);
-        }, 5000);
+        }
     };
 
     return (
@@ -163,27 +135,21 @@ const Roulette3D = ({ user, balance, onBalanceUpdate }) => {
                 <Canvas shadows>
                     <PerspectiveCamera makeDefault position={[0, 8, 8]} fov={45} />
                     <OrbitControls enablePan={false} maxPolarAngle={Math.PI / 2.5} />
-
                     <ambientLight intensity={0.5} />
                     <pointLight position={[10, 10, 10]} intensity={1.5} castShadow />
-                    <pointLight position={[-10, 10, -10]} intensity={0.5} />
-
                     <Suspense fallback={null}>
                         <Physics gravity={[0, -9.81, 0]}>
                             <Wheel spinning={spinning} angularVelocity={angularVelocity} />
                             <Ball launchRequested={launchRequested} />
-
                             <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.2, 0]} receiveShadow>
                                 <circleGeometry args={[5, 64]} />
                                 <meshStandardMaterial color="#0a0a0a" />
                             </mesh>
                         </Physics>
                     </Suspense>
-
                     <Environment preset="city" />
                 </Canvas>
 
-                {/* Status Overlay */}
                 <div className="absolute top-8 left-1/2 -translate-x-1/2">
                     <div className="glass-panel px-8 py-3 rounded-full border border-white/20 bg-black/60 shadow-xl backdrop-blur-md">
                         <span className={`font-black tracking-widest uppercase transition-colors duration-500 ${status.includes('GANASTE') ? 'text-neon-green' : 'text-neon-cyan'}`}>
@@ -192,7 +158,6 @@ const Roulette3D = ({ user, balance, onBalanceUpdate }) => {
                     </div>
                 </div>
 
-                {/* Spin Button */}
                 {!spinning && (
                     <div className="absolute bottom-8 right-8">
                         <button
