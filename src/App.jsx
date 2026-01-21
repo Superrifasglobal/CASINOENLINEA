@@ -26,11 +26,24 @@ const demoGames = [
   { id: 5, title: 'Consola Antigravity', category: 'Admin', image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80', active: true },
 ];
 
+// --- DEBUG FLAG ---
+const FORCE_MINIMAL = true; // Set to true to test basic rendering
+// ------------------
+
 function App() {
+  console.log("App: Mount Start");
   const [activeCategory, setActiveCategory] = useState('Home');
   const [isAdmin, setIsAdmin] = useState(false); // Reverted to false to prevent black screen on boot
   const [user, setUser] = useState(null);
-  console.log("App: Renderizando. User:", user?.email, "isAdmin:", isAdmin);
+  console.log("App: Render State - User:", user?.email, "isAdmin:", isAdmin, "FORCE_MINIMAL:", FORCE_MINIMAL);
+
+  if (FORCE_MINIMAL) {
+    return (
+      <div style={{ background: 'blue', color: 'white', height: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '40px' }}>
+        DEBUG MODE: RESPIRANDO
+      </div>
+    );
+  }
   const [balance, setBalance] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
