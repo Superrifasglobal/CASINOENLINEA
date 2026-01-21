@@ -67,7 +67,12 @@ function App() {
       console.log("Procesando usuario autenticado:", supabaseUser.email);
 
       // Logic for identifying admin
-      const isAdminUser = supabaseUser.email === 'nexjmr07@gmail.com' || supabaseUser.user_metadata?.role === 'admin';
+      const emailLower = supabaseUser.email ? supabaseUser.email.toLowerCase() : '';
+      const isAdminUser = emailLower === 'nexjmr07@gmail.com' || supabaseUser.user_metadata?.role === 'admin';
+
+      if (isAdminUser) {
+        console.log("👑 ADMIN ACCESS GRANTED for:", emailLower);
+      }
 
       const email = supabaseUser.email || "";
       const username = supabaseUser.user_metadata?.display_name || email.split('@')[0] || "Usuario";
