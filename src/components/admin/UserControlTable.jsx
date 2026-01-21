@@ -16,17 +16,15 @@ const UserControlTable = () => {
             try {
                 // Now calling our real serverless function
                 const res = await fetch('/api/users');
-                if (!res.ok) throw new Error('Failed to fetch');
                 const data = await res.json();
 
-                // If API returns error (e.g. missing key), fallback gracefully or show alert
-                if (data.error) {
-                    console.warn("API Error:", data.details || data.error);
-                    setError(data.details || data.error);
+                if (!res.ok) {
+                    throw new Error(data.details || data.error || `Error ${res.status}`);
                 }
 
                 if (data.users) {
                     setUsers(data.users);
+                    setError(null);
                 }
             } catch (err) {
                 console.error('Failed to fetch users:', err);

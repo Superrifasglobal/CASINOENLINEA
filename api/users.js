@@ -10,7 +10,14 @@ export default async function handler(req, res) {
     // For now, we'll assume the /admin route protection in frontend is the first line of defense,
     // but a backend check is better.
 
-    if (!supabaseUrl || !supabaseServiceKey) {
+    if (!supabaseUrl) {
+        return res.status(500).json({
+            error: 'Server Misconfiguration: Missing Supabase URL',
+            details: 'Please add VITE_SUPABASE_URL to Vercel Environment Variables.'
+        });
+    }
+
+    if (!supabaseServiceKey) {
         return res.status(500).json({
             error: 'Server Misconfiguration: Missing Service Role Key',
             details: 'Please add SUPABASE_SERVICE_ROLE_KEY to Vercel Environment Variables.'
