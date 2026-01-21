@@ -147,7 +147,7 @@ function App() {
               <button onClick={() => setActiveGame(null)} className="mb-4 text-gray-400 hover:text-white flex items-center gap-2">
                 <span className="text-xl">←</span> Volver al Lobby
               </button>
-              <Roulette3D />
+              <Roulette3D user={user} balance={balance} onBalanceUpdate={refreshBalance} />
             </div>
           ) : activeGame === 'roulette_classic' ? (
             <div className="max-w-6xl mx-auto">
