@@ -1,3 +1,5 @@
+import { SupabaseClient } from '@supabase/supabase-js';
+
 export interface Card {
     suit: string;
     value: string;
@@ -16,21 +18,25 @@ export class BlackjackService {
     private readonly suits = ['hearts', 'diamonds', 'clubs', 'spades'];
     private readonly values = ['2', '3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A'];
 
-    constructor(private db: D1Database) { }
+    constructor(private supabase: SupabaseClient) { }
 
     async getGameState(userId: string): Promise<BlackjackState | null> {
-        const res = await this.db.prepare('SELECT state FROM blackjack_games WHERE user_id = ?')
-            .bind(userId).first<{ state: string }>();
-        return res ? JSON.parse(res.state) : null;
+        const { data, error } = await this.supabase
+            .from('blackjack_games')
+            .select('state')
+            .eq('user_id', userId)
+            .single();
+        return data ? data.state : null;
     }
 
     async saveGameState(userId: string, state: BlackjackState): Promise<void> {
-        await this.db.prepare('INSERT OR REPLACE INTO blackjack_games (user_id, state, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP)')
-            .bind(userId, JSON.stringify(state)).run();
+        await this.supabase
+            .from('blackjack_games')
+            .upsert({ user_id: userId, state, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     }
 
     async clearGameState(userId: string): Promise<void> {
-        await this.db.prepare('DELETE FROM blackjack_games WHERE user_id = ?').bind(userId).run();
+        await this.supabase.from('blackjack_games').delete().eq('user_id', userId);
     }
 
     private createDeck(): Card[] {

@@ -7,13 +7,13 @@ const Sidebar = ({ activeCategory, onCategoryChange, isAdmin }) => {
     const setActive = onCategoryChange;
 
     const allItems = [
-        { label: 'Home', icon: Home, id: 'Home' },
-        { label: 'Slots', icon: Gamepad2, id: 'Slots' },
-        { label: 'Live Casino', icon: Tv, id: 'Live' },
-        { label: 'Table Games', icon: Dices, id: 'Tables' },
-        { label: 'Originals', icon: Hexagon, id: 'Originals' },
-        { label: 'Sports', icon: Trophy, id: 'Sports' },
-        { label: 'Admin', icon: Settings, id: 'Admin' },
+        { label: 'Inicio', icon: Home, id: 'Home' },
+        { label: 'Tragamonedas', icon: Gamepad2, id: 'Slots' },
+        { label: 'Casino en Vivo', icon: Tv, id: 'Live' },
+        { label: 'Juegos de Mesa', icon: Dices, id: 'Tables' },
+        { label: 'Originales', icon: Hexagon, id: 'Originals' },
+        { label: 'Deportes', icon: Trophy, id: 'Sports' },
+        { label: 'Administración', icon: Settings, id: 'Admin' },
     ];
 
     const menuItems = allItems.filter(item => {
@@ -72,8 +72,8 @@ const Sidebar = ({ activeCategory, onCategoryChange, isAdmin }) => {
                         <div className="absolute top-0 right-0 w-16 h-16 bg-neon-purple/20 blur-2xl rounded-full -mr-8 -mt-8" />
 
                         <div className="flex items-center justify-between mb-2 relative z-10">
-                            <span className="text-xs text-gray-400 font-medium">VIP LEVEL</span>
-                            <span className="text-xs text-neon-purple font-bold">PLATINUM</span>
+                            <span className="text-xs text-gray-400 font-medium">NIVEL VIP</span>
+                            <span className="text-xs text-neon-purple font-bold">PLATINO</span>
                         </div>
 
                         <div className="w-full h-1.5 bg-black/50 rounded-full overflow-hidden relative z-10">
@@ -87,7 +87,7 @@ const Sidebar = ({ activeCategory, onCategoryChange, isAdmin }) => {
 
                         <button className="w-full mt-3 py-2 rounded-lg bg-neon-purple/10 border border-neon-purple/30 text-xs text-neon-purple font-bold hover:bg-neon-purple/20 transition-all flex items-center justify-center gap-2 relative z-10">
                             <CreditCard size={14} />
-                            View Benefits
+                            Ver Beneficios
                         </button>
                     </div>
                 </div>

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X, User, Copy, LogOut, AlertTriangle, Wallet } from 'lucide-react';
-import { supabase } from '../lib/supabase';
+
 
 const ProfileOverlay = ({ isOpen, onClose, user, onLogout }) => {
     if (!isOpen || !user) return null;

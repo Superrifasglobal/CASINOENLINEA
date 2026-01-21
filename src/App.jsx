@@ -5,21 +5,25 @@ import GlobalChat from './components/GlobalChat';
 import GameCard from './components/GameCard';
 import AntigravityPanel from './components/AntigravityPanel';
 import AdminDashboard from './components/admin/AdminDashboard';
+import { auth } from './lib/firebase';
+import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { supabase } from './lib/supabase';
-import AuthOverlay from './components/AuthOverlay';
+import AuthOverlay from './components/auth/AuthOverlay';
 import ProfileOverlay from './components/ProfileOverlay';
 import NeonSlots from './components/NeonSlots';
 import CrashGame from './components/CrashGame';
+import MinesGame from './components/games/MinesGame'; // Added MinesGame import
 import AntigravityConsole from './components/AntigravityConsole';
 import Roulette3D from './components/Roulette3D';
 
 // Import game card images or use placeholders
 const demoGames = [
-  { id: 1, title: 'Royal Roulette', category: 'Tables', image: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80', active: true },
-  { id: 2, title: 'Neon Slots', category: 'Slots', image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?auto=format&fit=crop&q=80', active: false },
+  { id: 1, title: 'Ruleta Real', category: 'Tables', image: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80', active: true },
+  { id: 2, title: 'Tragamonedas Neón', category: 'Slots', image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?auto=format&fit=crop&q=80', active: false },
   { id: 3, title: 'Gravity Crash', category: 'Originals', image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80', active: true },
-  { id: 4, title: 'Roulette 3D PRO', category: 'Tables', image: 'https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=2574&auto=format&fit=crop', active: true },
-  { id: 5, title: 'Antigravity Console', category: 'Admin', image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80', active: true },
+  { id: 4, title: 'Ruleta 3D PRO', category: 'Tables', image: 'https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=2574&auto=format&fit=crop', active: true },
+  { id: 6, title: 'Minas de Gravedad', category: 'Originals', image: 'https://images.unsplash.com/photo-1518770660439-4636190af475?auto=format&fit=crop&q=80', active: true },
+  { id: 5, title: 'Consola Antigravity', category: 'Admin', image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80', active: true },
 ];
 
 function App() {
@@ -32,25 +36,15 @@ function App() {
   const [showChat, setShowChat] = useState(false);
   const [activeGame, setActiveGame] = useState(null);
 
-  // Sync user from Supabase
+  // Sync user from Firebase
   useEffect(() => {
-    console.log("App: Iniciando sincronización de sesión...");
+    console.log("App: Iniciando sincronización de sesión con Firebase...");
 
-    // 1. Get initial session
-    supabase.auth.getSession().then(({ data: { session } }) => {
-      console.log("App: Sesión inicial recuperada:", session ? "USUARIO PRESENTE" : "NULA");
-      if (session) {
-        handleUserAuthenticated(session.user);
-      }
-    }).catch(err => {
-      console.error("App: Fallo al obtener sesión inicial:", err);
-    });
-
-    // 2. Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      console.log("App: Evento de Auth detectado:", _event, session ? "SESIÓN ACTIVA" : "SIN SESIÓN");
-      if (session) {
-        handleUserAuthenticated(session.user);
+    const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
+      console.log("App: Evento de Auth detectado:", firebaseUser ? "USUARIO PRESENTE" : "NULA");
+      if (firebaseUser) {
+        await syncUserProfile(firebaseUser);
+        handleUserAuthenticated(firebaseUser);
       } else {
         setUser(null);
         setBalance(0);
@@ -60,51 +54,80 @@ function App() {
     });
 
     return () => {
-      console.log("App: Limpiando listener de suscripción");
-      subscription.unsubscribe();
+      console.log("App: Limpiando listener de Firebase");
+      unsubscribe();
     };
   }, []);
 
-  const handleUserAuthenticated = (supabaseUser) => {
+  const syncUserProfile = async (firebaseUser) => {
     try {
-      if (!supabaseUser) return;
+      console.log("Sincronizando perfil con Supabase para:", firebaseUser.uid);
 
-      console.log("Procesando usuario autenticado:", supabaseUser.email);
+      const { data, error } = await supabase
+        .from('profiles')
+        .upsert({
+          id: firebaseUser.uid,
+          email: firebaseUser.email,
+          display_name: firebaseUser.displayName || firebaseUser.email.split('@')[0],
+          updated_at: new Date().toISOString()
+        }, { onConflict: 'id' });
+
+      if (error) {
+        console.warn("Aviso en syncUserProfile (¿Tal vez el SQL no se ha ejecutado?):", error.message);
+      } else {
+        console.log("Perfil sincronizado correctamente.");
+      }
+    } catch (err) {
+      console.error("Error en syncUserProfile:", err);
+    }
+  };
+
+  const handleUserAuthenticated = async (firebaseUser) => {
+    try {
+      if (!firebaseUser) return;
+
+      console.log("Procesando usuario autenticado:", firebaseUser.email);
+
+      // Fetch current balance and role from Supabase
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('*')
+        .eq('id', firebaseUser.uid)
+        .single();
 
       // Logic for identifying admin
-      const emailLower = supabaseUser.email ? supabaseUser.email.toLowerCase() : '';
-      const isAdminUser = emailLower === 'nexjmr07@gmail.com' || supabaseUser.user_metadata?.role === 'admin';
+      const emailLower = firebaseUser.email ? firebaseUser.email.toLowerCase() : '';
+      const isAdminUser = emailLower === 'nexjmr07@gmail.com' || profile?.role === 'ADMIN';
 
       if (isAdminUser) {
         console.log("👑 ADMIN ACCESS GRANTED for:", emailLower);
       }
 
-      const email = supabaseUser.email || "";
-      const username = supabaseUser.user_metadata?.display_name || email.split('@')[0] || "Usuario";
+      const email = firebaseUser.email || "";
+      const username = profile?.display_name || firebaseUser.displayName || email.split('@')[0] || "Usuario";
 
       setIsAdmin(isAdminUser);
 
       setUser({
-        id: supabaseUser.id,
+        id: firebaseUser.uid,
         email: email,
         username: username,
         role: isAdminUser ? 'admin' : 'user',
+        balance: profile?.balance || 0
       });
 
-      // Simulated balance
-      setBalance(1000.0);
+      // Updated balance from DB
+      setBalance(profile?.balance || 0);
     } catch (error) {
       console.error("Error crítico en handleUserAuthenticated:", error);
-      alert("Error al cargar perfil de usuario. Revisa la consola.");
     }
   };
 
   const handleLogout = async () => {
     try {
-      await supabase.auth.signOut();
+      await signOut(auth);
       setUser(null);
       setBalance(0);
-      setIsAdmin(false);
       setIsAdmin(false);
       setShowProfile(false);
     } catch (error) {
@@ -113,8 +136,13 @@ function App() {
   };
 
   const refreshBalance = async () => {
-    // Implementar llamada real a /api/getBalance con el token de Supabase
-    console.log('Refreshing balance logic to be implemented with Supabase session');
+    if (!user) return;
+    const { data } = await supabase
+      .from('profiles')
+      .select('balance')
+      .eq('id', user.id)
+      .single();
+    if (data) setBalance(data.balance);
   };
 
   if (isAdmin) {
@@ -162,6 +190,8 @@ function App() {
             <NeonSlots user={user} balance={balance} onBalanceUpdate={refreshBalance} onBack={() => setActiveGame(null)} />
           ) : activeGame === 'crash' ? (
             <CrashGame user={user} balance={balance} onBalanceUpdate={refreshBalance} onBack={() => setActiveGame(null)} />
+          ) : activeGame === 'mines' ? ( // Added MinesGame rendering
+            <MinesGame user={user} balance={balance} onBalanceUpdate={refreshBalance} onBack={() => setActiveGame(null)} />
           ) : activeGame === 'antigravity_console' ? (
             <div className="max-w-7xl mx-auto">
               <button onClick={() => setActiveGame(null)} className="mb-8 text-gray-400 hover:text-white flex items-center gap-2 uppercase tracking-widest text-xs font-bold">
@@ -172,7 +202,7 @@ function App() {
           ) : (
             <>
               <div className="mb-12">
-                <h1 className="text-4xl md:text-5xl font-black italic mb-6 tracking-tighter">WELCOME TO ANTIGRAVITY</h1>
+                <h1 className="text-4xl md:text-5xl font-black italic mb-6 tracking-tighter">BIENVENIDO A ANTIGRAVITY</h1>
                 <div className="relative h-[400px] w-full rounded-[2.5rem] overflow-hidden group cursor-pointer border border-white/10 shadow-2xl" onClick={() => setActiveGame('roulette')}>
                   <div className="absolute inset-0 bg-gradient-to-r from-black via-black/50 to-transparent z-10 p-12 flex flex-col justify-center">
                     <span className="text-neon-green font-bold tracking-widest uppercase mb-2">Juego Destacado</span>
@@ -198,13 +228,18 @@ function App() {
                       .filter(game => (activeCategory === 'Home' || game.category === activeCategory))
                       .filter(game => game.category !== 'Admin' || isAdmin)
                       .map((game) => (
-                        <div key={game.id} onClick={() => {
-                          if (game.id === 1) setActiveGame('roulette_classic');
-                          if (game.id === 2) setActiveGame('slots');
-                          if (game.id === 3) setActiveGame('crash');
-                          if (game.id === 4) setActiveGame('roulette');
-                          if (game.id === 5) setActiveGame('antigravity_console');
-                        }}>
+                        <div
+                          key={game.id}
+                          onClick={() => {
+                            if (game.id === 1) setActiveGame('roulette_classic');
+                            if (game.id === 2) setActiveGame('slots');
+                            if (game.id === 3) setActiveGame('crash');
+                            if (game.id === 4) setActiveGame('roulette');
+                            if (game.id === 6) setActiveGame('mines'); // Added MinesGame activation
+                            if (game.id === 5) setActiveGame('antigravity_console');
+                          }}
+                          className="group cursor-pointer" // Added class from instruction
+                        >
                           <GameCard {...game} />
                         </div>
                       ))
@@ -232,7 +267,7 @@ function App() {
             onClick={() => setIsAdmin(true)}
             className="absolute bottom-8 right-8 bg-neon-purple/20 border border-neon-purple/30 text-neon-purple px-4 py-2 rounded-full shadow-lg text-xs font-bold uppercase tracking-wider hover:bg-neon-purple hover:text-white transition-all z-50"
           >
-            Admin Mode
+            Modo Admin
           </button>
         )}
       </div>

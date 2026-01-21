@@ -1,13 +1,15 @@
 import { parseEther, formatEther } from 'viem';
+import { SupabaseClient } from '@supabase/supabase-js';
 
 export interface Env {
-    DB: D1Database;
+    SUPABASE_URL: string;
+    SUPABASE_SERVICE_ROLE_KEY: string;
     ETH_RPC_URL: string;
     HOUSE_WALLET: string;
 }
 
 export class WalletService {
-    constructor(private env: Env) { }
+    constructor(private supabase: SupabaseClient, private env: Env) { }
 
     async verifyDeposit(userId: string, txHash: string, expectedAmount: string) {
         // 1. Verificar transacción on-chain
@@ -41,21 +43,35 @@ export class WalletService {
             }
 
             // 2. Verificar si ya fue procesada para evitar doble acreditación
-            const existing = await this.env.DB.prepare(
-                'SELECT id FROM transactions WHERE tx_hash = ?'
-            ).get(txHash);
+            const { data: existing } = await this.supabase
+                .from('transactions')
+                .select('id')
+                .eq('metadata->>tx_hash', txHash)
+                .single();
 
             if (existing) throw new Error('Transacción ya procesada');
 
-            // 3. Actualizar saldo y registrar transacción (Atómico)
-            const operations = [
-                this.env.DB.prepare('UPDATE users SET balance = balance + ? WHERE id = ?').bind(Number(actualAmount), userId),
-                this.env.DB.prepare(
-                    'INSERT INTO transactions (user_id, type, amount, status, tx_hash) VALUES (?, ?, ?, ?, ?)'
-                ).bind(userId, 'deposit', Number(actualAmount), 'completed', txHash)
-            ];
+            // 3. Actualizar saldo y registrar transacción
+            const { data: profile } = await this.supabase
+                .from('profiles')
+                .select('balance')
+                .eq('id', userId)
+                .single();
 
-            await this.env.DB.batch(operations);
+            const { error: updateError } = await this.supabase
+                .from('profiles')
+                .update({ balance: (profile?.balance || 0) + Number(actualAmount) })
+                .eq('id', userId);
+
+            if (updateError) throw new Error('Error al actualizar saldo');
+
+            await this.supabase.from('transactions').insert({
+                user_id: userId,
+                type: 'deposit',
+                amount: Number(actualAmount),
+                status: 'completed',
+                metadata: { tx_hash: txHash }
+            });
 
             return { success: true, amount: actualAmount };
         } catch (error: any) {
@@ -68,26 +84,34 @@ export class WalletService {
         if (amount <= 0) throw new Error('Monto inválido');
 
         // 1. Verificar saldo
-        const user = await this.env.DB.prepare('SELECT balance FROM users WHERE id = ?').get<{ balance: number }>(userId);
-        if (!user || user.balance < amount) {
+        const { data: user, error } = await this.supabase
+            .from('profiles')
+            .select('balance')
+            .eq('id', userId)
+            .single();
+
+        if (error || !user || user.balance < amount) {
             throw new Error('Saldo insuficiente');
         }
 
         // 2. Descontar saldo inmediatamente y registrar retiro como 'pending'
-        // Esto evita double spending
-        const operations = [
-            this.env.DB.prepare('UPDATE users SET balance = balance - ? WHERE id = ? AND balance >= ?').bind(amount, userId, amount),
-            this.env.DB.prepare(
-                'INSERT INTO transactions (user_id, type, amount, status, tx_hash) VALUES (?, ?, ?, ?, ?)'
-            ).bind(userId, 'withdrawal', amount, 'pending', `pending_${Date.now()}`)
-        ];
+        const { error: withdrawError } = await this.supabase
+            .from('profiles')
+            .update({ balance: user.balance - amount })
+            .eq('id', userId);
 
-        const result = await this.env.DB.batch(operations);
+        if (withdrawError) throw new Error('Error al procesar el retiro');
 
-        // Si la primera operación no afectó ninguna fila, el saldo cambió entre la lectura y la escritura
-        if (result[0].meta.changes === 0) {
-            throw new Error('Error al procesar el retiro (posible cambio de saldo)');
-        }
+        await this.supabase.from('transactions').insert({
+            user_id: userId,
+            type: 'withdrawal',
+            amount: amount,
+            status: 'pending',
+            metadata: {
+                destination: destinationWallet,
+                tx_hash: `pending_${Date.now()}`
+            }
+        });
 
         // 3. Alerta para administración (Simulado con un log, podría ser un webhook de Slack/Discord)
         console.log(`[ALERTA ADMIN] Retiro solicitado: Usuario ${userId}, Monto ${amount} ETH, Destino ${destinationWallet}`);

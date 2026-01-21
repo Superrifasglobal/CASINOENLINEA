@@ -21,6 +21,7 @@ const WalletManager = ({ user, refreshBalance }) => {
     const [amount, setAmount] = useState('');
     const [method, setMethod] = useState('binance'); // 'binance' or 'pago_movil'
     const [status, setStatus] = useState('idle'); // idle, submitting, success, error
+    const [isLoadingGateways, setIsLoadingGateways] = useState(true);
     const [reference, setReference] = useState('');
     const [gateways, setGateways] = useState({
         binance: { address: '', is_active: false },
@@ -33,15 +34,32 @@ const WalletManager = ({ user, refreshBalance }) => {
     }, []);
 
     const fetchGateways = async () => {
+        setIsLoadingGateways(true);
         const { data } = await supabase.from('payment_gateways').select('*');
         if (data) {
             const binance = data.find(g => g.id === 'binance_pay');
             const pm = data.find(g => g.id === 'pago_movil');
             setGateways({
-                binance: binance?.config || { address: '', is_active: false },
-                pago_movil: pm?.config || { phone: '', bank: '', ci: '', is_active: false }
+                binance: {
+                    address: binance?.config?.address || '',
+                    is_active: binance?.is_active ?? false
+                },
+                pago_movil: {
+                    phone: pm?.config?.phone || '',
+                    bank: pm?.config?.bank || '',
+                    ci: pm?.config?.ci || '',
+                    is_active: pm?.is_active ?? false
+                }
+            });
+        } else {
+            console.error('No se pudo obtener datos de pasarelas. Usando configuración por defecto.');
+            // Fail-safe defaults
+            setGateways({
+                binance: { address: 'T9yD... (Ejemplo)', is_active: true },
+                pago_movil: { phone: '0412...', bank: 'Banco...', ci: 'V-...', is_active: true }
             });
         }
+        setIsLoadingGateways(false);
     };
 
     const handleCopy = (text, type) => {
@@ -56,7 +74,7 @@ const WalletManager = ({ user, refreshBalance }) => {
 
         try {
             const { error } = await supabase.from('deposits').insert({
-                user_id: user.id,
+                user_id: user.id, // Current Firebase UID
                 amount: parseFloat(amount),
                 method: method,
                 reference: reference,
@@ -98,13 +116,18 @@ const WalletManager = ({ user, refreshBalance }) => {
 
             <AnimatePresence mode="wait">
                 <motion.div
-                    key={method}
+                    key={method + isLoadingGateways}
                     initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
                     exit={{ opacity: 0, y: -10 }}
                     className="space-y-6"
                 >
-                    {!activeGateway.is_active ? (
+                    {isLoadingGateways ? (
+                        <div className="py-20 flex flex-col items-center justify-center gap-4 opacity-50">
+                            <Loader2 className="animate-spin text-neon-cyan" size={32} />
+                            <span className="text-[10px] font-black uppercase tracking-[0.2em]">Sincronizando Pasarela...</span>
+                        </div>
+                    ) : !activeGateway.is_active ? (
                         <div className="py-10 text-center opacity-40 italic uppercase tracking-widest text-[10px]">
                             Esta pasarela se encuentra en mantenimiento
                         </div>

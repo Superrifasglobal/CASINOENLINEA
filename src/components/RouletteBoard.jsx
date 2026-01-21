@@ -91,7 +91,7 @@ const RouletteBoard = ({ onBetsChange, totalBalance, gameStatus }) => {
 
                     {/* Bottom Betting Zones (Dozens) */}
                     <div className="grid grid-cols-3 h-12">
-                        {['1st 12', '2nd 12', '3rd 12'].map((label, idx) => (
+                        {['1era 12', '2da 12', '3ra 12'].map((label, idx) => (
                             <div
                                 key={label}
                                 onClick={() => handlePlaceBet(`dozen_${idx + 1}`)}
@@ -113,10 +113,10 @@ const RouletteBoard = ({ onBetsChange, totalBalance, gameStatus }) => {
                     <div className="grid grid-cols-6 h-12">
                         {[
                             { id: 'low', label: '1-18' },
-                            { id: 'even', label: 'EVEN' },
+                            { id: 'even', label: 'PAR' },
                             { id: 'red', label: '', icon: <div className="w-6 h-4 bg-red-600 rotate-45 transform" /> },
                             { id: 'black', label: '', icon: <div className="w-6 h-4 bg-black rotate-45 transform" /> },
-                            { id: 'odd', label: 'ODD' },
+                            { id: 'odd', label: 'IMPAR' },
                             { id: 'high', label: '19-36' }
                         ].map((bet) => (
                             <div
@@ -145,7 +145,7 @@ const RouletteBoard = ({ onBetsChange, totalBalance, gameStatus }) => {
                             onClick={() => handlePlaceBet(`column_${col}`)}
                             className="w-16 flex-1 flex items-center justify-center text-[10px] font-bold border border-white/10 bg-[#1a1a1b] hover:bg-white/5 cursor-pointer uppercase tracking-tight relative"
                         >
-                            2 TO 1
+                            2 A 1
                             {bets[`column_${col}`] > 0 && (
                                 <div className="absolute inset-0 flex items-center justify-center">
                                     <div className="w-6 h-6 rounded-full bg-yellow-400 border border-white text-[8px] text-black flex items-center justify-center font-bold">

@@ -1,3 +1,5 @@
+import { SupabaseClient } from '@supabase/supabase-js';
+
 export interface RankInfo {
     label: string;
     minXP: number;
@@ -14,33 +16,36 @@ export const RANKS: RankInfo[] = [
 ];
 
 export class XPService {
-    constructor(private db: D1Database) { }
+    constructor(private supabase: SupabaseClient) { }
 
     async addXP(userId: string, betAmount: number) {
         // XP is proportional to risk (10 XP per 1 unit of currency bet)
         const xpToAdd = Math.floor(betAmount * 10);
 
-        const user = await this.db.prepare(
-            'SELECT xp, level FROM users WHERE id = ?'
-        ).bind(userId).first<{ xp: number, level: number }>();
+        const { data: user, error } = await this.supabase
+            .from('profiles')
+            .select('xp, level')
+            .eq('id', userId)
+            .single();
 
-        if (!user) return null;
+        if (error || !user) return null;
 
-        const newXP = user.xp + xpToAdd;
-        let newLevel = user.level;
+        const newXP = (user.xp || 0) + xpToAdd;
+        let newLevel = user.level || 1;
 
         // Simple level logic: Level = floor(sqrt(XP / 100)) + 1
         const calculatedLevel = Math.floor(Math.sqrt(newXP / 100)) + 1;
 
         let leveledUp = false;
-        if (calculatedLevel > user.level) {
+        if (calculatedLevel > newLevel) {
             newLevel = calculatedLevel;
             leveledUp = true;
         }
 
-        await this.db.prepare(
-            'UPDATE users SET xp = ?, level = ? WHERE id = ?'
-        ).bind(newXP, newLevel, userId).run();
+        await this.supabase
+            .from('profiles')
+            .update({ xp: newXP, level: newLevel })
+            .eq('id', userId);
 
         return {
             newXP,
@@ -63,11 +68,13 @@ export class XPService {
     }
 
     async applyCashback(userId: string, lossAmount: number) {
-        const user = await this.db.prepare(
-            'SELECT level, xp FROM users WHERE id = ?'
-        ).bind(userId).first<{ level: number, xp: number }>();
+        const { data: user, error } = await this.supabase
+            .from('profiles')
+            .select('level, xp, balance')
+            .eq('id', userId)
+            .single();
 
-        if (!user) return;
+        if (error || !user) return;
 
         const rank = this.getRankInfo(user.level, user.xp);
         let cashbackPercent = 0;
@@ -78,9 +85,10 @@ export class XPService {
 
         if (cashbackPercent > 0) {
             const cashbackAmount = lossAmount * cashbackPercent;
-            await this.db.prepare(
-                'UPDATE users SET balance = balance + ? WHERE id = ?'
-            ).bind(cashbackAmount, userId).run();
+            await this.supabase
+                .from('profiles')
+                .update({ balance: user.balance + cashbackAmount })
+                .eq('id', userId);
 
             console.log(`[XP SYSTEM] Cashback de ${cashbackAmount} aplicado al usuario ${userId}`);
         }

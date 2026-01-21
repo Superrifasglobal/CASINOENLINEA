@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Send, Users, Smile, Gift, ChevronRight } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { supabase } from '../lib/supabase';
+
 
 const GlobalChat = ({ user, isOpen, onClose }) => {
     const [messages, setMessages] = useState([]);
@@ -31,7 +31,7 @@ const GlobalChat = ({ user, isOpen, onClose }) => {
         // Optimistic update
         const msg = {
             id: Date.now(),
-            user: user?.email ? user.email.split('@')[0] : 'Guest',
+            user: user?.email ? user.email.split('@')[0] : 'Invitado',
             text: newMessage,
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             role: user ? 'user' : 'guest',
@@ -115,7 +115,7 @@ const GlobalChat = ({ user, isOpen, onClose }) => {
                 </form>
                 <div className="flex justify-between mt-3 px-1">
                     <button className="text-gray-500 hover:text-neon-pink transition-colors text-[10px] flex items-center gap-1">
-                        <Gift size={12} /> Rain
+                        <Gift size={12} /> Lluvia
                     </button>
                     <button className="text-gray-500 hover:text-yellow-400 transition-colors text-[10px] flex items-center gap-1">
                         <Smile size={12} /> Emojis

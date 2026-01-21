@@ -143,10 +143,14 @@ const BlackjackGame = () => {
                     <div className="flex flex-col items-center gap-6 w-full max-w-lg pointer-events-auto">
                         {/* Status Label */}
                         <div className={`px-6 py-2 rounded-full border text-[10px] font-black tracking-[0.2em] uppercase ${gameState.status === 'playing' ? 'bg-blue-500/10 border-blue-500/50 text-blue-400' :
-                                gameState.status === 'player_win' || gameState.status === 'blackjack' ? 'bg-green-500/10 border-green-500/50 text-green-400 animate-pulse' :
-                                    'bg-red-500/10 border-red-500/50 text-red-400'
+                            gameState.status === 'player_win' || gameState.status === 'blackjack' ? 'bg-green-500/10 border-green-500/50 text-green-400 animate-pulse' :
+                                'bg-red-500/10 border-red-500/50 text-red-400'
                             }`}>
-                            {gameState.status.replace('_', ' ')}
+                            {gameState.status === 'player_win' ? '¡GANASTE!' :
+                                gameState.status === 'dealer_win' ? 'GANA LA CASA' :
+                                    gameState.status === 'push' ? 'EMPATE' :
+                                        gameState.status === 'blackjack' ? 'BLACKJACK' :
+                                            gameState.status === 'bust' ? 'PASADO' : 'JUGANDO'}
                         </div>
 
                         <div className="flex items-center gap-4 w-full">

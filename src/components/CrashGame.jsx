@@ -142,7 +142,7 @@ const CrashGame = ({ user, balance, onBalanceUpdate, onBack }) => {
                                 {multiplier.toFixed(2)}x
                             </div>
                             <div className="mt-2 text-sm font-bold uppercase tracking-[0.3em] text-gray-500">
-                                {gameState === 'RUNNING' ? 'Vuelo en curso' : gameState === 'CRASHED' ? 'CRASHED' : 'Esperando despegue'}
+                                {gameState === 'RUNNING' ? 'Vuelo en curso' : gameState === 'CRASHED' ? 'ESTRELLADO' : 'Esperando despegue'}
                             </div>
                         </div>
                     </div>
