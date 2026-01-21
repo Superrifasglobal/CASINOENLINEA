@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { supabase } from '../../lib/supabase';
 import { Ban, Search, ChevronLeft, ChevronRight, Gavel, UserX } from 'lucide-react';
 import { motion } from 'framer-motion';
 
@@ -9,44 +10,54 @@ const UserControlTable = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        const fetchUsers = async () => {
+        // Simulate fetching data
+        const loadData = async () => {
             setLoading(true);
-            try {
-                const res = await fetch(`/api/admin/users-list?page=${page}`, {
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'Authorization': `Bearer ${localStorage.getItem('token') || '29971627Nex@'}`
-                    },
-                });
-                const data = await res.json();
-                setUsers(data.users);
-            } catch (err) {
-                console.error('Failed to fetch users');
-            } finally {
+
+            // 1. Get current user for realism
+            const { data: { session } } = await supabase.auth.getSession();
+            const currentUser = session?.user ? {
+                id: session.user.id,
+                email: session.user.email,
+                balance: 1000.00, // Sync with your app context if possible
+                level: 12,
+                xp: 2450,
+                last_bet: new Date().toISOString(),
+                status: 'ACTIVE'
+            } : null;
+
+            // 2. Generate dummy users
+            const dummyUsers = Array.from({ length: 8 }, (_, i) => ({
+                id: `user_${Math.random().toString(36).substr(2, 9)}`,
+                email: `player${i + 1}@example.com`,
+                balance: (Math.random() * 5000).toFixed(2),
+                level: Math.floor(Math.random() * 50) + 1,
+                xp: Math.floor(Math.random() * 10000),
+                last_bet: new Date(Date.now() - Math.floor(Math.random() * 86400000 * 3)).toISOString(),
+                status: Math.random() > 0.9 ? 'BANNED' : 'ACTIVE'
+            }));
+
+            // Combine
+            const allUsers = currentUser ? [currentUser, ...dummyUsers] : dummyUsers;
+
+            // Artificial delay for "loading" feel
+            setTimeout(() => {
+                setUsers(allUsers);
                 setLoading(false);
-            }
+            }, 800);
         };
-        fetchUsers();
+
+        loadData();
     }, [page]);
 
     const handleBan = async (id) => {
         if (!confirm(`¿Estás seguro de banear permanentemente al usuario ${id}?`)) return;
 
-        try {
-            const res = await fetch('/api/admin/user-action', {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Authorization': 'Bearer ADMIN_TOKEN'
-                },
-                body: JSON.stringify({ targetUserId: id, action: 'ban' })
-            });
-            if (res.ok) {
-                setUsers(users.map(u => u.id === id ? { ...u, status: 'BANNED' } : u));
-            }
-        } catch (err) {
-            alert('Error al ejecutar el baneo');
-        }
+        // Optimistic UI update
+        setUsers(users.map(u => u.id === id ? { ...u, status: 'BANNED' } : u));
+
+        // Simulating API call
+        // In real app: call supabase.rpc('ban_user', { user_id: id })
     };
 
     return (
@@ -57,10 +68,10 @@ const UserControlTable = () => {
                     <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500" size={16} />
                     <input
                         type="text"
-                        placeholder="Buscar por ID de Wallet..."
+                        placeholder="Buscar por ID..."
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
-                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-xs font-mono focus:outline-none focus:border-neon-blue/50"
+                        className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-12 pr-4 text-xs font-mono focus:outline-none focus:border-neon-blue/50 text-white"
                     />
                 </div>
 
@@ -86,10 +97,10 @@ const UserControlTable = () => {
                 <table className="w-full text-left border-collapse">
                     <thead>
                         <tr className="bg-white/[0.02]">
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Usuario</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Usuario / ID</th>
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Saldo</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Nivel/Rank</th>
-                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Última Apuesta</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Nivel</th>
+                            <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Última Actividad</th>
                             <th className="px-6 py-4 text-[10px] font-black uppercase tracking-widest text-gray-500">Acciones</th>
                         </tr>
                     </thead>
@@ -101,34 +112,36 @@ const UserControlTable = () => {
                                 </tr>
                             ))
                         ) : (
-                            users.filter(u => u.id.includes(search)).map((user) => (
+                            users.filter(u => u.id.toLowerCase().includes(search.toLowerCase()) || (u.email && u.email.toLowerCase().includes(search.toLowerCase()))).map((user) => (
                                 <tr key={user.id} className="hover:bg-white/[0.02] transition-colors group">
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
-                                            <span className="text-xs font-mono text-white">{user.id}</span>
-                                            <span className={`text-[9px] font-bold ${user.status === 'ACTIVE' ? 'text-neon-green' : 'text-neon-pink'}`}>
+                                            <span className="text-xs font-bold text-white mb-0.5">{user.email || 'Anónimo'}</span>
+                                            <span className="text-[9px] font-mono text-gray-500">{user.id}</span>
+                                            <span className={`text-[9px] font-bold mt-1 w-fit px-1.5 py-0.5 rounded ${user.status === 'ACTIVE' ? 'bg-neon-green/10 text-neon-green' : 'bg-neon-pink/10 text-neon-pink'}`}>
                                                 {user.status}
                                             </span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="text-xs font-mono font-bold">{user.balance.toFixed(4)} ETH</span>
+                                        <span className="text-xs font-mono font-bold text-white">{parseFloat(user.balance).toLocaleString()} USD</span>
                                     </td>
                                     <td className="px-6 py-4">
                                         <div className="flex flex-col">
                                             <span className="text-xs font-bold text-gray-300">Lvl {user.level}</span>
-                                            <span className="text-[9px] text-gray-500 uppercase">{user.xp} XP</span>
+                                            <span className="text-[9px] text-gray-500 uppercase">{user.xp.toLocaleString()} XP</span>
                                         </div>
                                     </td>
                                     <td className="px-6 py-4">
-                                        <span className="text-xs text-gray-400">{user.last_bet ? new Date(user.last_bet).toLocaleString() : 'Nunca'}</span>
+                                        <span className="text-xs text-gray-400">{new Date(user.last_bet).toLocaleDateString()}</span>
+                                        <div className="text-[9px] text-gray-600">{new Date(user.last_bet).toLocaleTimeString()}</div>
                                     </td>
                                     <td className="px-6 py-4">
                                         <button
                                             onClick={() => handleBan(user.id)}
                                             disabled={user.status === 'BANNED'}
-                                            className="p-2 rounded-lg bg-neon-pink/10 text-neon-pink opacity-0 group-hover:opacity-100 transition-opacity hover:bg-neon-pink/20 disabled:hidden"
-                                            title="Banear IP y Cuenta"
+                                            className="p-2 rounded-lg bg-neon-pink/10 text-neon-pink opacity-50 hover:opacity-100 transition-all hover:bg-neon-pink/20 disabled:cursor-not-allowed disabled:grayscale"
+                                            title="Banear Usuario"
                                         >
                                             <UserX size={16} />
                                         </button>
