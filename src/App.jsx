@@ -14,14 +14,14 @@ import Roulette3D from './components/Roulette3D';
 
 // Import game card images or use placeholders
 const demoGames = [
-  { id: 1, title: 'Royal Roulette', category: 'Table Games', image: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80', active: true },
+  { id: 1, title: 'Royal Roulette', category: 'Tables', image: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80', active: true },
   { id: 2, title: 'Neon Slots', category: 'Slots', image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?auto=format&fit=crop&q=80', active: false },
   { id: 3, title: 'Gravity Crash', category: 'Originals', image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80', active: true },
-  { id: 4, title: 'Roulette 3D PRO', category: 'Table Games', image: 'https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=2574&auto=format&fit=crop', active: true },
+  { id: 4, title: 'Roulette 3D PRO', category: 'Tables', image: 'https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=2574&auto=format&fit=crop', active: true },
 ];
 
 function App() {
-  const [activeCategory, setActiveCategory] = useState('All Games');
+  const [activeCategory, setActiveCategory] = useState('Home');
   const [isAdmin, setIsAdmin] = useState(false);
   const [user, setUser] = useState(null);
   const [balance, setBalance] = useState(0);
@@ -179,16 +179,31 @@ function App() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {demoGames.map((game) => (
-                    <div key={game.id} onClick={() => {
-                      if (game.id === 1) setActiveGame('roulette');
-                      if (game.id === 2) setActiveGame('slots');
-                      if (game.id === 3) setActiveGame('crash');
-                      if (game.id === 4) setActiveGame('roulette');
-                    }}>
-                      <GameCard {...game} />
+                  {demoGames.filter(game => activeCategory === 'Home' || game.category === activeCategory).length > 0 ? (
+                    demoGames
+                      .filter(game => activeCategory === 'Home' || game.category === activeCategory)
+                      .map((game) => (
+                        <div key={game.id} onClick={() => {
+                          if (game.id === 1) setActiveGame('roulette');
+                          if (game.id === 2) setActiveGame('slots');
+                          if (game.id === 3) setActiveGame('crash');
+                          if (game.id === 4) setActiveGame('roulette');
+                        }}>
+                          <GameCard {...game} />
+                        </div>
+                      ))
+                  ) : (
+                    <div className="col-span-full py-20 text-center glass-panel rounded-3xl border border-white/5 bg-black/20">
+                      <p className="text-gray-400 text-lg uppercase tracking-widest font-bold">Próximamente</p>
+                      <p className="text-gray-500 mt-2">No hay juegos disponibles en <span className="text-neon-green">{activeCategory}</span> todavía.</p>
+                      <button
+                        onClick={() => setActiveCategory('Home')}
+                        className="mt-6 px-6 py-2 rounded-full border border-white/10 text-white hover:bg-white/5 transition-all"
+                      >
+                        Explorar otros juegos
+                      </button>
                     </div>
-                  ))}
+                  )}
                 </div>
               </div>
             </>

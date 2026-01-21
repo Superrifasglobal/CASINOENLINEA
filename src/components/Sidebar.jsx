@@ -2,14 +2,16 @@ import React, { useState } from 'react';
 import { Home, Gamepad2, Tv, Dices, Trophy, CreditCard, ChevronLeft, Hexagon } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const Sidebar = () => {
-    const [active, setActive] = useState('Home');
+const Sidebar = ({ activeCategory, onCategoryChange }) => {
+    const active = activeCategory;
+    const setActive = onCategoryChange;
 
     const menuItems = [
         { label: 'Home', icon: Home, id: 'Home' },
         { label: 'Slots', icon: Gamepad2, id: 'Slots' },
         { label: 'Live Casino', icon: Tv, id: 'Live' },
         { label: 'Table Games', icon: Dices, id: 'Tables' },
+        { label: 'Originals', icon: Hexagon, id: 'Originals' },
         { label: 'Sports', icon: Trophy, id: 'Sports' },
     ];
 
