@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { createClient } from '@supabase/supabase-js';
+import { supabase } from '../lib/supabase';
 import {
     Settings,
     Zap,
@@ -11,11 +11,6 @@ import {
     Cpu
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
-
-const supabase = createClient(
-    process.env.VITE_SUPABASE_URL,
-    process.env.VITE_SUPABASE_ANON_KEY
-);
 
 const AntigravityConsole = () => {
     const [config, setConfig] = useState({
