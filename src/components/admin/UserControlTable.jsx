@@ -10,44 +10,30 @@ const UserControlTable = () => {
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
-        // Simulate fetching data
-        const loadData = async () => {
+        const fetchUsers = async () => {
             setLoading(true);
+            try {
+                // Now calling our real serverless function
+                const res = await fetch('/api/users');
+                if (!res.ok) throw new Error('Failed to fetch');
+                const data = await res.json();
 
-            // 1. Get current user for realism
-            const { data: { session } } = await supabase.auth.getSession();
-            const currentUser = session?.user ? {
-                id: session.user.id,
-                email: session.user.email,
-                balance: 1000.00, // Sync with your app context if possible
-                level: 12,
-                xp: 2450,
-                last_bet: new Date().toISOString(),
-                status: 'ACTIVE'
-            } : null;
+                // If API returns error (e.g. missing key), fallback gracefully or show alert
+                if (data.error) {
+                    console.warn("API Error:", data.details || data.error);
+                }
 
-            // 2. Generate dummy users
-            const dummyUsers = Array.from({ length: 8 }, (_, i) => ({
-                id: `user_${Math.random().toString(36).substr(2, 9)}`,
-                email: `player${i + 1}@example.com`,
-                balance: (Math.random() * 5000).toFixed(2),
-                level: Math.floor(Math.random() * 50) + 1,
-                xp: Math.floor(Math.random() * 10000),
-                last_bet: new Date(Date.now() - Math.floor(Math.random() * 86400000 * 3)).toISOString(),
-                status: Math.random() > 0.9 ? 'BANNED' : 'ACTIVE'
-            }));
-
-            // Combine
-            const allUsers = currentUser ? [currentUser, ...dummyUsers] : dummyUsers;
-
-            // Artificial delay for "loading" feel
-            setTimeout(() => {
-                setUsers(allUsers);
+                if (data.users) {
+                    setUsers(data.users);
+                }
+            } catch (err) {
+                console.error('Failed to fetch users:', err);
+            } finally {
                 setLoading(false);
-            }, 800);
+            }
         };
 
-        loadData();
+        fetchUsers();
     }, [page]);
 
     const handleBan = async (id) => {
