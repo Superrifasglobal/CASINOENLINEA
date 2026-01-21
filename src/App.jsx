@@ -24,7 +24,7 @@ const demoGames = [
 
 function App() {
   const [activeCategory, setActiveCategory] = useState('Home');
-  const [isAdmin, setIsAdmin] = useState(false);
+  const [isAdmin, setIsAdmin] = useState(true); // Forced for this session per request
   const [user, setUser] = useState(null);
   const [balance, setBalance] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
@@ -82,6 +82,8 @@ function App() {
       const email = supabaseUser.email || "";
       const username = supabaseUser.user_metadata?.display_name || email.split('@')[0] || "Usuario";
 
+      setIsAdmin(isAdminUser);
+
       setUser({
         id: supabaseUser.id,
         email: email,
@@ -131,7 +133,7 @@ function App() {
 
   return (
     <div className="flex h-screen bg-background text-white overflow-hidden relative">
-      <Sidebar activeCategory={activeCategory} onCategoryChange={setActiveCategory} />
+      <Sidebar activeCategory={activeCategory} onCategoryChange={setActiveCategory} isAdmin={isAdmin} />
 
       <div className="flex-1 flex flex-col relative overflow-hidden">
         <Header
@@ -188,9 +190,13 @@ function App() {
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                  {demoGames.filter(game => activeCategory === 'Home' || game.category === activeCategory).length > 0 ? (
+                  {demoGames
+                    .filter(game => (activeCategory === 'Home' || game.category === activeCategory))
+                    .filter(game => game.category !== 'Admin' || isAdmin)
+                    .length > 0 ? (
                     demoGames
-                      .filter(game => activeCategory === 'Home' || game.category === activeCategory)
+                      .filter(game => (activeCategory === 'Home' || game.category === activeCategory))
+                      .filter(game => game.category !== 'Admin' || isAdmin)
                       .map((game) => (
                         <div key={game.id} onClick={() => {
                           if (game.id === 1) setActiveGame('roulette_classic');

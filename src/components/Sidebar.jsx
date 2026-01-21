@@ -2,11 +2,11 @@ import React, { useState } from 'react';
 import { Home, Gamepad2, Tv, Dices, Trophy, CreditCard, ChevronLeft, Hexagon, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
-const Sidebar = ({ activeCategory, onCategoryChange }) => {
+const Sidebar = ({ activeCategory, onCategoryChange, isAdmin }) => {
     const active = activeCategory;
     const setActive = onCategoryChange;
 
-    const menuItems = [
+    const allItems = [
         { label: 'Home', icon: Home, id: 'Home' },
         { label: 'Slots', icon: Gamepad2, id: 'Slots' },
         { label: 'Live Casino', icon: Tv, id: 'Live' },
@@ -15,6 +15,11 @@ const Sidebar = ({ activeCategory, onCategoryChange }) => {
         { label: 'Sports', icon: Trophy, id: 'Sports' },
         { label: 'Admin', icon: Settings, id: 'Admin' },
     ];
+
+    const menuItems = allItems.filter(item => {
+        if (item.id === 'Admin') return isAdmin;
+        return true;
+    });
 
     return (
         <motion.aside
