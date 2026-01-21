@@ -38,20 +38,35 @@ export default async function handler(req, res) {
             throw error;
         }
 
+        // Fetch profile data for all users to get real balances and levels
+        const { data: profiles, error: profilesError } = await supabase
+            .from('profiles')
+            .select('id, balance, display_name, role, created_at');
+
+        if (profilesError) {
+            console.error('Error fetching profiles:', profilesError);
+            // Non-critical: we can continue with empty profiles but it's not ideal
+        }
+
+        const profileMap = profiles ? profiles.reduce((acc, p) => ({ ...acc, [p.id]: p }), {}) : {};
+
         // Transform users to match frontend expectation
-        // We mock game stats (balance, xp) since they aren't in Auth
-        const enhancedUsers = users.map(u => ({
-            id: u.id,
-            email: u.email,
-            created_at: u.created_at,
-            last_bet: u.last_sign_in_at || new Date().toISOString(),
-            status: u.banned_until ? 'BANNED' : 'ACTIVE',
-            // Mocked game data until we have a 'profiles' table sync
-            balance: (Math.random() * 1000).toFixed(2),
-            level: Math.floor(Math.random() * 20) + 1,
-            xp: Math.floor(Math.random() * 5000),
-            role: u.user_metadata?.role || 'user'
-        }));
+        const enhancedUsers = users.map(u => {
+            const profile = profileMap[u.id];
+            return {
+                id: u.id,
+                email: u.email,
+                created_at: u.created_at,
+                last_bet: u.last_sign_in_at || new Date().toISOString(),
+                status: u.banned_until ? 'BANNED' : 'ACTIVE',
+                // Real data or defaults if profile doesn't exist yet
+                balance: profile?.balance || 0,
+                // These might need addition to schema later, using defaults for now
+                level: 1,
+                xp: 0,
+                role: profile?.role || u.user_metadata?.role || 'user'
+            };
+        });
 
         return res.status(200).json({ users: enhancedUsers });
 

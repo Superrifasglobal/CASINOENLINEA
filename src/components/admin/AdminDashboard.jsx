@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import VaultCard from './VaultCard';
 import UserControlTable from './UserControlTable';
 import RTPManager from './RTPManager';
+import DepositManager from './DepositManager';
 
 const AdminDashboard = () => {
     const [activeTab, setActiveTab] = useState('overview');
@@ -11,6 +12,7 @@ const AdminDashboard = () => {
     const tabs = [
         { id: 'overview', label: 'Bóveda & Stats', icon: LayoutDashboard },
         { id: 'users', label: 'Jugadores', icon: Users },
+        { id: 'deposits', label: 'Depósitos', icon: Activity },
         { id: 'security', label: 'Seguridad', icon: ShieldCheck },
         { id: 'settings', label: 'RTP Global', icon: Settings },
     ];
@@ -134,6 +136,12 @@ const AdminDashboard = () => {
                         {activeTab === 'users' && (
                             <div className="premium-card">
                                 <UserControlTable />
+                            </div>
+                        )}
+
+                        {activeTab === 'deposits' && (
+                            <div className="premium-card">
+                                <DepositManager />
                             </div>
                         )}
 

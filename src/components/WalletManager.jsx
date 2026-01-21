@@ -24,8 +24,8 @@ const WalletManager = ({ user, refreshBalance }) => {
     const [isLoadingGateways, setIsLoadingGateways] = useState(true);
     const [reference, setReference] = useState('');
     const [gateways, setGateways] = useState({
-        binance: { address: '', is_active: false },
-        pago_movil: { phone: '', bank: '', ci: '', is_active: false }
+        binance: { address: 'T9yD... (Ejemplo)', is_active: true },
+        pago_movil: { phone: '0412...', bank: 'Banco...', ci: 'V-...', is_active: true }
     });
     const [copied, setCopied] = useState(null);
 
@@ -35,29 +35,34 @@ const WalletManager = ({ user, refreshBalance }) => {
 
     const fetchGateways = async () => {
         setIsLoadingGateways(true);
-        const { data } = await supabase.from('payment_gateways').select('*');
-        if (data) {
-            const binance = data.find(g => g.id === 'binance_pay');
-            const pm = data.find(g => g.id === 'pago_movil');
-            setGateways({
-                binance: {
-                    address: binance?.config?.address || '',
-                    is_active: binance?.is_active ?? false
-                },
-                pago_movil: {
-                    phone: pm?.config?.phone || '',
-                    bank: pm?.config?.bank || '',
-                    ci: pm?.config?.ci || '',
-                    is_active: pm?.is_active ?? false
-                }
-            });
-        } else {
-            console.error('No se pudo obtener datos de pasarelas. Usando configuración por defecto.');
-            // Fail-safe defaults
-            setGateways({
-                binance: { address: 'T9yD... (Ejemplo)', is_active: true },
-                pago_movil: { phone: '0412...', bank: 'Banco...', ci: 'V-...', is_active: true }
-            });
+        try {
+            const { data, error } = await supabase.from('payment_gateways').select('*');
+
+            if (data && data.length > 0) {
+                const binance = data.find(g => g.id === 'binance_pay');
+                const pm = data.find(g => g.id === 'pago_movil');
+                setGateways({
+                    binance: {
+                        address: binance?.config?.address || 'T9yD... (Ejemplo)',
+                        is_active: binance?.is_active ?? true
+                    },
+                    pago_movil: {
+                        phone: pm?.config?.phone || '0412...',
+                        bank: pm?.config?.bank || 'Banco...',
+                        ci: pm?.config?.ci || 'V-...',
+                        is_active: pm?.is_active ?? true
+                    }
+                });
+            } else {
+                // Si no hay datos o la tabla no existe, usamos los valores por defecto ACTIVOS
+                console.log('Usando configuración por defecto (pasarelas activas)');
+                setGateways({
+                    binance: { address: 'T9yD... (Ejemplo)', is_active: true },
+                    pago_movil: { phone: '0412...', bank: 'Banco...', ci: 'V-...', is_active: true }
+                });
+            }
+        } catch (err) {
+            console.error('Error al obtener pasarelas:', err);
         }
         setIsLoadingGateways(false);
     };
