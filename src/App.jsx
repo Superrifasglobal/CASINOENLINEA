@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import GlobalChat from './components/GlobalChat';
 import GameCard from './components/GameCard';
 import AntigravityPanel from './components/AntigravityPanel';
 import AdminDashboard from './components/admin/AdminDashboard';
@@ -25,6 +26,7 @@ function App() {
   const [balance, setBalance] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showChat, setShowChat] = useState(false);
   const [activeGame, setActiveGame] = useState(null);
 
   // Sync user from Supabase
@@ -134,6 +136,7 @@ function App() {
           balance={balance}
           onLoginClick={() => setShowAuth(true)}
           onProfileClick={() => setShowProfile(true)}
+          onChatToggle={() => setShowChat(!showChat)}
         />
 
         <main className="flex-1 overflow-y-auto p-8 custom-scrollbar relative z-10">
@@ -197,6 +200,12 @@ function App() {
       <AuthOverlay
         isOpen={showAuth}
         onClose={() => setShowAuth(false)}
+      />
+
+      <GlobalChat
+        user={user}
+        isOpen={showChat}
+        onClose={() => setShowChat(false)}
       />
 
       <ProfileOverlay

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Bell, Search, Wallet, User as UserIcon, Menu } from 'lucide-react';
+import { Bell, Search, Wallet, User as UserIcon, Menu, MessageSquare } from 'lucide-react';
 import { motion } from 'framer-motion';
 import WalletManager from './WalletManager';
 
@@ -40,6 +40,13 @@ const Header = ({ user, balance, onLoginClick, onProfileClick }) => {
                 <WalletManager />
 
                 <div className="flex items-center gap-2">
+                    <button
+                        onClick={onChatToggle}
+                        className="p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] text-gray-400 hover:text-neon-green transition-all border border-white/5"
+                    >
+                        <MessageSquare size={20} />
+                    </button>
+
                     <button className="relative p-3 rounded-2xl bg-white/[0.03] hover:bg-white/[0.08] text-gray-400 hover:text-white transition-all border border-white/5">
                         <Bell size={20} />
                         <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-neon-pink rounded-full shadow-[0_0_8px_#ff007f]" />
