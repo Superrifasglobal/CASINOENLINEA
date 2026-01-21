@@ -62,7 +62,7 @@ export default async function handler(req, res) {
         const payout = calculatePotentialPayout(winningNumber, bets);
 
         // 3. Atomic Transaction (Simplified for Demo - ideally use RPC)
-        await supabase.rpc('process_roulette_bet', {
+        const { data: gameSession } = await supabase.rpc('process_roulette_bet', {
             p_user_id: userId,
             p_bet_amount: totalBet,
             p_win_amount: payout,
@@ -71,10 +71,12 @@ export default async function handler(req, res) {
         });
 
         res.status(200).json({
-            success: true,
-            winningNumber,
-            payout,
-            newBalance: profile.balance - totalBet + payout
+            "session_id": gameSession?.id || (Math.random().toString(36).substring(2) + Date.now().toString(36)),
+            "user_balance": profile.balance - totalBet + payout,
+            "current_bet": bets,
+            "server_result": winningNumber,
+            "visual_seed": Math.floor(Math.random() * 100000),
+            "rtp_status": currentRTP > TARGET_RTP ? "optimized" : "fair"
         });
 
     } catch (error) {

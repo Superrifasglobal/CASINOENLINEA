@@ -173,19 +173,22 @@ const Roulette3D = ({ user, balance, onBalanceUpdate }) => {
             });
 
             const data = await response.json();
-            if (!data.success) throw new Error(data.error);
+            if (data.server_result !== undefined) {
+                setWinData(data);
+                const randomSpeed = Math.floor(Math.random() * 1000) + 1200;
+                setAngularVelocity(randomSpeed);
+                setLaunchRequested(prev => prev + 1);
+                setStatus("Girando...");
 
-            setWinData(data);
-            const randomSpeed = Math.floor(Math.random() * 1000) + 1200;
-            setAngularVelocity(randomSpeed);
-            setLaunchRequested(prev => prev + 1);
-            setStatus("Girando...");
-
-            setTimeout(() => {
-                setGameState('result');
-                setStatus(`Resultado: ${data.winningNumber} ${data.payout > 0 ? `| GANASTE: $${data.payout}` : '| Sigue intentando'}`);
-                if (onBalanceUpdate) onBalanceUpdate();
-            }, 6000);
+                setTimeout(() => {
+                    setGameState('result');
+                    const payout = data.user_balance - (balance - totalBetValue);
+                    setStatus(`Resultado: ${data.server_result} ${payout > 0 ? `| GANASTE: $${payout.toFixed(2)}` : '| Sigue intentando'}`);
+                    if (onBalanceUpdate) onBalanceUpdate();
+                }, 6000);
+            } else {
+                throw new Error("Invalid server response");
+            }
 
         } catch (error) {
             console.error('Spin Error:', error);
