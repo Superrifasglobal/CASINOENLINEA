@@ -8,6 +8,7 @@ const UserControlTable = () => {
     const [page, setPage] = useState(1);
     const [search, setSearch] = useState('');
     const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
 
     useEffect(() => {
         const fetchUsers = async () => {
@@ -21,6 +22,7 @@ const UserControlTable = () => {
                 // If API returns error (e.g. missing key), fallback gracefully or show alert
                 if (data.error) {
                     console.warn("API Error:", data.details || data.error);
+                    setError(data.details || data.error);
                 }
 
                 if (data.users) {
@@ -28,6 +30,7 @@ const UserControlTable = () => {
                 }
             } catch (err) {
                 console.error('Failed to fetch users:', err);
+                setError(err.message);
             } finally {
                 setLoading(false);
             }
@@ -139,7 +142,13 @@ const UserControlTable = () => {
                 </table>
             </div>
 
-            {!loading && users.length === 0 && (
+            {!loading && error && (
+                <div className="p-10 text-center text-neon-pink text-xs uppercase tracking-widest font-bold">
+                    Error del Sistema: {error}
+                </div>
+            )}
+
+            {!loading && !error && users.length === 0 && (
                 <div className="p-10 text-center text-gray-500 text-xs uppercase tracking-widest italic">
                     No se encontraron exploradores en este sector
                 </div>
