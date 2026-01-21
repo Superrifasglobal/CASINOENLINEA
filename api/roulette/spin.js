@@ -7,7 +7,6 @@ const supabase = createClient(
 
 const ROULETTE_SEQUENCE = [0, 32, 15, 19, 4, 21, 2, 25, 17, 34, 6, 27, 13, 36, 11, 30, 8, 23, 10, 5, 24, 16, 33, 1, 20, 14, 31, 9, 22, 18, 29, 7, 28, 12, 35, 3, 26];
 const RED_NUMBERS = [1, 3, 5, 7, 9, 12, 14, 16, 18, 19, 21, 23, 25, 27, 30, 32, 34, 36];
-const TARGET_RTP = 0.95;
 
 const calculatePotentialPayout = (winNum, bets) => {
     let payout = 0;
@@ -36,38 +35,50 @@ export default async function handler(req, res) {
     const { userId, bets, totalBet } = req.body;
 
     try {
-        // 1. Fetch User and Global Stats
-        const { data: profile, error: profileErr } = await supabase.from('profiles').select('balance').eq('id', userId).single();
+        // 1. Fetch User, Global Stats, and Antigravity Config
+        const [
+            { data: profile, error: profileErr },
+            { data: stats },
+            { data: config }
+        ] = await Promise.all([
+            supabase.from('profiles').select('balance').eq('id', userId).single(),
+            supabase.from('casino_stats').select('*').eq('id', 'global').single(),
+            supabase.from('casino_config').select('*').eq('id', 'global').single()
+        ]);
+
         if (profileErr || profile.balance < totalBet) return res.status(400).json({ error: 'Insufficient balance' });
 
-        const { data: stats } = await supabase.from('casino_stats').select('*').eq('id', 'global').single();
+        // Dynamic Parameters from Console
+        const targetRTP = config?.global_rtp ?? 0.95;
+        const houseMargin = config?.roulette_house_margin ?? 1.0; // 0.0 (Aggressive) to 1.0 (Standard)
+
         const currentRTP = stats ? (stats.total_payouts / stats.total_bets) : 0.9;
 
-        // 2. Risk Management & RTP Control Engine
-        const DAILY_RISK_LIMIT = 500; // House limit for a single spin payout
+        // 2. Risk Management & Bias Engine
+        const DAILY_RISK_LIMIT = 1000 * houseMargin; // Limit scales with house margin
 
-        // Calculate exposure for all 37 slots
         const exposureMatrix = ROULETTE_SEQUENCE.map(num => ({
             num,
             payout: calculatePotentialPayout(num, bets)
         }));
 
-        // Filter numbers that won't break the bankroll
         let safeOptions = exposureMatrix.filter(opt => opt.payout <= DAILY_RISK_LIMIT);
         let rtp_status = "fair";
 
-        // If high risk detected (e.g. massive bets on 17), force house-friendly outcome
-        if (safeOptions.length < 37) {
-            rtp_status = "risk_mitigated";
+        if (safeOptions.length < 37) rtp_status = "risk_mitigated";
+
+        // Bias Bias: If houseMargin is low, narrow the safeOptions to the absolute minimum losses
+        if (houseMargin < 0.5) {
+            rtp_status = "aggressive_bias";
+            safeOptions = exposureMatrix.sort((a, b) => a.payout - b.payout).slice(0, Math.max(1, Math.floor(37 * houseMargin)));
         }
 
-        // Apply RTP steering if necessary
-        if (currentRTP > TARGET_RTP) {
+        // Global RTP Steering
+        if (currentRTP > targetRTP) {
             rtp_status = "optimized";
             safeOptions = exposureMatrix.sort((a, b) => a.payout - b.payout).slice(0, 5);
         }
 
-        // If every number is a huge risk (shouldn't happen with limits), pick best for house
         if (safeOptions.length === 0) {
             safeOptions = [exposureMatrix.sort((a, b) => a.payout - b.payout)[0]];
         }

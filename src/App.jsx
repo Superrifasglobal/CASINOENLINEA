@@ -10,6 +10,7 @@ import AuthOverlay from './components/AuthOverlay';
 import ProfileOverlay from './components/ProfileOverlay';
 import NeonSlots from './components/NeonSlots';
 import CrashGame from './components/CrashGame';
+import AntigravityConsole from './components/AntigravityConsole';
 import Roulette3D from './components/Roulette3D';
 
 // Import game card images or use placeholders
@@ -18,6 +19,7 @@ const demoGames = [
   { id: 2, title: 'Neon Slots', category: 'Slots', image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?auto=format&fit=crop&q=80', active: false },
   { id: 3, title: 'Gravity Crash', category: 'Originals', image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80', active: true },
   { id: 4, title: 'Roulette 3D PRO', category: 'Tables', image: 'https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=2574&auto=format&fit=crop', active: true },
+  { id: 5, title: 'Antigravity Console', category: 'Admin', image: 'https://images.unsplash.com/photo-1550751827-4bd374c3f58b?auto=format&fit=crop&q=80', active: true },
 ];
 
 function App() {
@@ -158,6 +160,13 @@ function App() {
             <NeonSlots user={user} balance={balance} onBalanceUpdate={refreshBalance} onBack={() => setActiveGame(null)} />
           ) : activeGame === 'crash' ? (
             <CrashGame user={user} balance={balance} onBalanceUpdate={refreshBalance} onBack={() => setActiveGame(null)} />
+          ) : activeGame === 'antigravity_console' ? (
+            <div className="max-w-7xl mx-auto">
+              <button onClick={() => setActiveGame(null)} className="mb-8 text-gray-400 hover:text-white flex items-center gap-2 uppercase tracking-widest text-xs font-bold">
+                <span className="text-xl">←</span> Cerrar Consola Maestra
+              </button>
+              <AntigravityConsole />
+            </div>
           ) : (
             <>
               <div className="mb-12">
@@ -184,10 +193,11 @@ function App() {
                       .filter(game => activeCategory === 'Home' || game.category === activeCategory)
                       .map((game) => (
                         <div key={game.id} onClick={() => {
-                          if (game.id === 1) setActiveGame('roulette');
+                          if (game.id === 1) setActiveGame('roulette_classic');
                           if (game.id === 2) setActiveGame('slots');
                           if (game.id === 3) setActiveGame('crash');
                           if (game.id === 4) setActiveGame('roulette');
+                          if (game.id === 5) setActiveGame('antigravity_console');
                         }}>
                           <GameCard {...game} />
                         </div>

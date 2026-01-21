@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Home, Gamepad2, Tv, Dices, Trophy, CreditCard, ChevronLeft, Hexagon } from 'lucide-react';
+import { Home, Gamepad2, Tv, Dices, Trophy, CreditCard, ChevronLeft, Hexagon, Settings } from 'lucide-react';
 import { motion } from 'framer-motion';
 
 const Sidebar = ({ activeCategory, onCategoryChange }) => {
@@ -13,6 +13,7 @@ const Sidebar = ({ activeCategory, onCategoryChange }) => {
         { label: 'Table Games', icon: Dices, id: 'Tables' },
         { label: 'Originals', icon: Hexagon, id: 'Originals' },
         { label: 'Sports', icon: Trophy, id: 'Sports' },
+        { label: 'Admin', icon: Settings, id: 'Admin' },
     ];
 
     return (
