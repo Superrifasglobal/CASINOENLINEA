@@ -28,8 +28,9 @@ const demoGames = [
 
 function App() {
   const [activeCategory, setActiveCategory] = useState('Home');
-  const [isAdmin, setIsAdmin] = useState(true); // Forced for this session per request
+  const [isAdmin, setIsAdmin] = useState(false); // Reverted to false to prevent black screen on boot
   const [user, setUser] = useState(null);
+  console.log("App: Renderizando. User:", user?.email, "isAdmin:", isAdmin);
   const [balance, setBalance] = useState(0);
   const [showAuth, setShowAuth] = useState(false);
   const [showProfile, setShowProfile] = useState(false);

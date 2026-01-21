@@ -8,6 +8,7 @@ const VaultCard = () => {
         playerDebts: 0,
         retirableProfit: 0
     });
+    console.log("VaultCard: Renderizando con stats:", stats);
     const [loading, setLoading] = useState(true);
     const [transferring, setTransferring] = useState(false);
     const [withdrawAmount, setWithdrawAmount] = useState('');
@@ -16,13 +17,18 @@ const VaultCard = () => {
     useEffect(() => {
         const fetchStats = async () => {
             try {
+                console.log("VaultCard: Intentando obtener stats...");
                 const res = await fetch('/api/admin/vault', {
                     headers: { 'Authorization': `Bearer ${localStorage.getItem('token') || '29971627Nex@'}` }
                 });
+                if (!res.ok) throw new Error('Network response was not ok');
                 const data = await res.json();
-                setStats(data.vault);
+                console.log("VaultCard: Datos recibidos:", data);
+                if (data && data.vault) {
+                    setStats(data.vault);
+                }
             } catch (err) {
-                console.error('Failed to fetch vault stats');
+                console.error('Failed to fetch vault stats:', err);
             } finally {
                 setLoading(false);
             }
@@ -46,7 +52,10 @@ const VaultCard = () => {
         }, 2000);
     };
 
-    const formatCurrency = (val) => val.toFixed(4) + ' ETH';
+    const formatCurrency = (val) => {
+        if (typeof val !== 'number') return '0.0000 ETH';
+        return val.toFixed(4) + ' ETH';
+    };
 
     return (
         <div className="flex flex-col gap-6">
