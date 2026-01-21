@@ -3,7 +3,7 @@ import { Bell, Search, Wallet, User as UserIcon, Menu, MessageSquare } from 'luc
 import { motion } from 'framer-motion';
 import WalletManager from './WalletManager';
 
-const Header = ({ user, balance, onLoginClick, onProfileClick }) => {
+const Header = ({ user, balance, onLoginClick, onProfileClick, onChatToggle }) => {
     return (
         <header className="h-20 flex items-center justify-between px-4 md:px-8 z-40 relative">
             <div className="flex items-center gap-4 md:hidden">
