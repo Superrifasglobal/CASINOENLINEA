@@ -12,6 +12,11 @@ const firebaseConfig = {
     measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
 };
 
+console.log("Firebase Config Debug:", {
+    apiKey: firebaseConfig.apiKey ? "Present" : "Missing",
+    authDomain: firebaseConfig.authDomain,
+    projectId: firebaseConfig.projectId
+});
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);
 export const db = getFirestore(app);

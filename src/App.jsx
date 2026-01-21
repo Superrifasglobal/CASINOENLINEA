@@ -27,7 +27,7 @@ const demoGames = [
 ];
 
 // --- DEBUG FLAG ---
-const FORCE_MINIMAL = true; // Set to true to test basic rendering
+const FORCE_MINIMAL = false; // Set to true to test basic rendering
 // ------------------
 
 function App() {
