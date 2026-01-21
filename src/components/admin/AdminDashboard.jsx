@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { LayoutDashboard, ShieldCheck, Users, Settings, Activity } from 'lucide-react';
-import { motion } from 'framer-motion';
+import { motion, AnimatePresence } from 'framer-motion';
 import VaultCard from './VaultCard';
 import UserControlTable from './UserControlTable';
 import RTPManager from './RTPManager';
