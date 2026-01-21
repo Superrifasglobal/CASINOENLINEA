@@ -10,13 +10,14 @@ import AuthOverlay from './components/AuthOverlay';
 import ProfileOverlay from './components/ProfileOverlay';
 import NeonSlots from './components/NeonSlots';
 import CrashGame from './components/CrashGame';
+import Roulette3D from './components/Roulette3D';
 
 // Import game card images or use placeholders
 const demoGames = [
   { id: 1, title: 'Royal Roulette', category: 'Table Games', image: 'https://images.unsplash.com/photo-1511193311914-0346f16efe90?auto=format&fit=crop&q=80', active: true },
   { id: 2, title: 'Neon Slots', category: 'Slots', image: 'https://images.unsplash.com/photo-1596838132731-3301c3fd4317?auto=format&fit=crop&q=80', active: false },
   { id: 3, title: 'Gravity Crash', category: 'Originals', image: 'https://images.unsplash.com/photo-1451187580459-43490279c0fa?auto=format&fit=crop&q=80', active: true },
-  { id: 4, title: 'Quantum Blackjack', category: 'Cards', image: 'https://images.unsplash.com/photo-1518893063934-f71420a2333e?auto=format&fit=crop&q=80', active: false },
+  { id: 4, title: 'Roulette 3D PRO', category: 'Table Games', image: 'https://images.unsplash.com/photo-1605806616949-1e87b487bc2a?q=80&w=2574&auto=format&fit=crop', active: true },
 ];
 
 function App() {
@@ -143,6 +144,13 @@ function App() {
 
           {activeGame === 'roulette' ? (
             <div className="max-w-6xl mx-auto">
+              <button onClick={() => setActiveGame(null)} className="mb-4 text-gray-400 hover:text-white flex items-center gap-2">
+                <span className="text-xl">←</span> Volver al Lobby
+              </button>
+              <Roulette3D />
+            </div>
+          ) : activeGame === 'roulette_classic' ? (
+            <div className="max-w-6xl mx-auto">
               <button onClick={() => setActiveGame(null)} className="mb-4 text-gray-400 hover:text-white">← Volver al Lobby</button>
               <AntigravityPanel user={user} balance={balance} onBalanceUpdate={refreshBalance} />
             </div>
@@ -176,6 +184,7 @@ function App() {
                       if (game.id === 1) setActiveGame('roulette');
                       if (game.id === 2) setActiveGame('slots');
                       if (game.id === 3) setActiveGame('crash');
+                      if (game.id === 4) setActiveGame('roulette');
                     }}>
                       <GameCard {...game} />
                     </div>
