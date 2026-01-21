@@ -43,25 +43,39 @@ export default async function handler(req, res) {
         const { data: stats } = await supabase.from('casino_stats').select('*').eq('id', 'global').single();
         const currentRTP = stats ? (stats.total_payouts / stats.total_bets) : 0.9;
 
-        // 2. RTP Control Engine
-        let winningNumber;
-        if (currentRTP > TARGET_RTP) {
-            // "Low Loss" mode: Filter numbers by payout and pick one from the lowest candidates
-            const options = ROULETTE_SEQUENCE.map(num => ({
-                num,
-                payout: calculatePotentialPayout(num, bets)
-            })).sort((a, b) => a.payout - b.payout);
+        // 2. Risk Management & RTP Control Engine
+        const DAILY_RISK_LIMIT = 500; // House limit for a single spin payout
 
-            // Pick among the 5 best numbers for the house
-            winningNumber = options[Math.floor(Math.random() * 5)].num;
-        } else {
-            // "Fair" mode: Random selection
-            winningNumber = ROULETTE_SEQUENCE[Math.floor(Math.random() * 37)];
+        // Calculate exposure for all 37 slots
+        const exposureMatrix = ROULETTE_SEQUENCE.map(num => ({
+            num,
+            payout: calculatePotentialPayout(num, bets)
+        }));
+
+        // Filter numbers that won't break the bankroll
+        let safeOptions = exposureMatrix.filter(opt => opt.payout <= DAILY_RISK_LIMIT);
+        let rtp_status = "fair";
+
+        // If high risk detected (e.g. massive bets on 17), force house-friendly outcome
+        if (safeOptions.length < 37) {
+            rtp_status = "risk_mitigated";
         }
 
+        // Apply RTP steering if necessary
+        if (currentRTP > TARGET_RTP) {
+            rtp_status = "optimized";
+            safeOptions = exposureMatrix.sort((a, b) => a.payout - b.payout).slice(0, 5);
+        }
+
+        // If every number is a huge risk (shouldn't happen with limits), pick best for house
+        if (safeOptions.length === 0) {
+            safeOptions = [exposureMatrix.sort((a, b) => a.payout - b.payout)[0]];
+        }
+
+        const winningNumber = safeOptions[Math.floor(Math.random() * safeOptions.length)].num;
         const payout = calculatePotentialPayout(winningNumber, bets);
 
-        // 3. Atomic Transaction (Simplified for Demo - ideally use RPC)
+        // 3. Atomic Transaction
         const { data: gameSession } = await supabase.rpc('process_roulette_bet', {
             p_user_id: userId,
             p_bet_amount: totalBet,
@@ -76,7 +90,7 @@ export default async function handler(req, res) {
             "current_bet": bets,
             "server_result": winningNumber,
             "visual_seed": Math.floor(Math.random() * 100000),
-            "rtp_status": currentRTP > TARGET_RTP ? "optimized" : "fair"
+            "rtp_status": rtp_status
         });
 
     } catch (error) {
